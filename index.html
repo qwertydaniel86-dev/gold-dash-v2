@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#0b0f14"><title>Gold Dash v2</title>
+<style>
+body{margin:0;background:#0b0f14;color:#e6edf3;font:16px -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 14px 24px}
+h1{font-size:15px;color:#8b98a5;margin:14px 0 4px;font-weight:600}
+.px{font-size:54px;font-weight:700;letter-spacing:-1px;margin:0}.up{color:#2ecc71}.dn{color:#ff5c5c}.mu{color:#8b98a5;font-size:13px}
+.row{display:flex;gap:10px;margin-top:12px}.card{flex:1;background:#141b23;border-radius:12px;padding:12px}
+.badge{font-size:30px;font-weight:800;text-align:center;border-radius:12px;padding:14px;margin-top:12px}
+.BUY{background:#14532d;color:#4ade80}.SELL{background:#5f1d1d;color:#ff8080}.WAIT{background:#3b3320;color:#f5c542}
+.arr-up{color:#2ecc71;animation:f .6s infinite alternate}.arr-dn{color:#ff5c5c;animation:f .6s infinite alternate}.spike{display:none;text-align:center;font-weight:800;padding:10px;border-radius:10px;margin-top:8px;animation:f .6s infinite alternate}
+@keyframes f{to{opacity:.35}}.lv{display:flex;justify-content:space-between;padding:7px 10px;border-radius:8px}
+.near{background:#24303c;font-weight:700;outline:1px solid #f5c542}canvas{width:100%;height:140px;background:#141b23;border-radius:12px;margin-top:12px}
+.btns{display:flex;gap:8px;margin-top:12px}.btns button:active{transform:scale(.95);filter:brightness(1.4)}.btns button{touch-action:manipulation;-webkit-user-select:none;user-select:none;flex:1;border:0;border-radius:12px;padding:16px 0;font-size:18px;font-weight:800;color:#fff}
+.bb{background:#15803d}.bs{background:#b91c1c}.bc{background:#334155;flex:.7!important}.tp{display:none;text-align:center;font-size:24px;font-weight:800;padding:12px;border-radius:12px;margin-top:8px;animation:f .6s infinite alternate}
+body.inpos{padding-bottom:52vh}body.inpos #trade{position:fixed;left:0;right:0;bottom:0;height:50vh;overflow:auto;background:#0b0f14;border-top:2px solid #f5c542;padding:8px 14px calc(env(safe-area-inset-bottom) + 8px);box-sizing:border-box;z-index:9}
+@media (orientation:landscape){body.inpos{padding-bottom:24px;padding-right:calc(50vw + 8px)}body.inpos #trade{top:0;bottom:0;left:auto;right:0;width:50vw;height:100vh;border-top:0;border-left:2px solid #f5c542;padding:12px 14px}}
+.ent{display:flex;align-items:center;gap:8px;background:#141b23;border-radius:10px;padding:8px 10px;margin-top:6px}.el{flex:1.3;min-width:0;font-size:15px}.el .mu{font-size:11px}
+.ew{flex:1;text-align:center;font-weight:800;font-size:14px}.bl{animation:f .6s infinite alternate}.WAITc{color:#f5c542}.en{flex:.8;text-align:right;font-weight:700;font-size:18px}.en .mu{font-size:11px;font-weight:400}
+.ex{border:0;background:#334155;color:#fff;border-radius:8px;width:30px;height:30px;font-size:14px;touch-action:manipulation}
+.note{color:#8b98a5;font-size:12px;margin-top:14px;text-align:center}
+</style></head><body>
+<h1>XAU/USD · Gold <span id="st" class="mu"></span></h1>
+<p class="px"><span id="px">—</span> <span id="arr" style="font-size:44px"></span></p><div id="chg" class="mu">loading…</div>
+<div id="sig" class="badge WAIT">WAIT</div><div id="spk" class="spike"></div>
+<div id="trade"><div class="btns"><button class="bb" id="bB">BUY</button><button class="bs" id="bS">SELL</button><button class="bc" id="bC">CLOSE</button></div>
+<div id="nt" class="mu" style="text-align:center;min-height:18px;margin-top:6px"></div><div id="tpx" class="tp"></div><div id="pos" style="display:none"></div><div id="rev" class="mu" style="text-align:center;font-size:18px;margin-top:8px"></div></div>
+<div class="row"><div class="card"><div class="mu">10-min move</div><div id="m10">—</div></div>
+<div class="card"><div class="mu">Stop (1.5×ATR14, 5m)</div><div id="atr">—</div></div></div>
+<div class="row"><div class="card"><div class="mu">Day high / low</div><div id="hl">—</div></div></div>
+<div class="card" style="margin-top:12px"><div class="mu">Key levels (Nov 19)</div><div id="lv"></div></div>
+<canvas id="ch" width="700" height="280"></canvas>
+<div class="note">Alerts only, no trading. <b>Signals are not financial advice.</b></div>
+<script>
+var API=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaS9YQVVVU0Q='),LV=[['R2',3805],['R1',3780],['S1',3720],['S2',3650]],H=[],prev=null,atr=null,bars1=[];
+function $(i){return document.getElementById(i)}
+function f(x){return x.toFixed(2)}
+function at(ms){var t=Date.now()-ms,b=null;for(var i=0;i<H.length;i++){if(H[i][0]<=t)b=H[i];else break}return b}
+async function j(u){var r=await fetch(u,{cache:'no-store'});return r.json()}
+async function candles(){try{var a=(await j(API+'/ohlc?interval=1m&limit=100')).bars.slice().reverse();bars1=a;
+ if(!H.length)a.forEach(function(b){H.push([Date.parse(b.openTime)+60000,b.close])});
+ var c=(await j(API+'/ohlc?interval=5m&limit=16')).bars.slice().reverse(),tr=[];
+ for(var i=1;i<c.length;i++){var p=c[i-1].close;tr.push(Math.max(c[i].high-c[i].low,Math.abs(c[i].high-p),Math.abs(c[i].low-p)))}
+ tr=tr.slice(-14);atr=tr.reduce(function(s,x){return s+x},0)/tr.length;draw()}catch(e){}}
+function draw(){var cv=$('ch'),g=cv.getContext('2d'),W=cv.width,Hh=cv.height;g.clearRect(0,0,W,Hh);if(bars1.length<2)return;
+ var v=bars1.map(function(b){return b.close}),mn=Math.min.apply(0,v),mx=Math.max.apply(0,v),r=mx-mn||1;
+ g.strokeStyle=v[v.length-1]>=v[0]?'#2ecc71':'#ff5c5c';g.lineWidth=3;g.beginPath();
+ v.forEach(function(x,i){var X=i/(v.length-1)*W,Y=Hh-10-(x-mn)/r*(Hh-20);i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke()}
+async function tick(){try{var q=await j(API),m=q.mid,now=Date.now();H.push([now,m]);while(H.length&&H[0][0]<now-900000)H.shift();
+ var px=$('px');px.textContent=f(m);px.className=(prev==null?(q.dayDiffPercent>=0?'up':'dn'):m>prev?'up':m<prev?'dn':(px.className||'up'));prev=m;
+ $('chg').innerHTML='<span class="'+(q.dayDiffPercent>=0?'up':'dn')+'">'+(q.dayDiffPercent>=0?'+':'')+q.dayDiffPercent.toFixed(2)+'% today</span> · bid '+f(q.bid)+' / ask '+f(q.ask);
+ $('st').textContent=q.stale||q.marketState!=='open'?'· '+(q.marketState||'stale'):'· live';
+ $('hl').textContent=f(q.high)+' / '+f(q.low);
+ var b10=at(600000),p10=b10?(m/b10[1]-1)*100:0,s=p10>=0.02?'BUY':p10<=-0.02?'SELL':'WAIT';
+ $('sig').className='badge '+s;$('sig').textContent=s;$('m10').innerHTML='<span class="'+(p10>=0?'up':'dn')+'">'+(p10>=0?'+':'')+p10.toFixed(3)+'%</span>';
+ var b2=at(120000),p2=b2?(m/b2[1]-1)*100:0,k=$('spk');
+ if(Math.abs(p2)>=0.2){k.style.display='block';k.className='spike '+(p2>0?'BUY':'SELL');k.textContent=(p2>0?'▲ SPIKE UP ':'▼ SPIKE DOWN ')+p2.toFixed(2)+'% / 2 min'}else k.style.display='none';var A=$('arr');if(Math.abs(p2)>=0.2){A.textContent=p2>0?'▲':'▼';A.className=p2>0?'arr-up':'arr-dn'}else{A.textContent='';A.className=''}
+ if(atr){var d=1.5*atr;$('atr').innerHTML=f(d)+'<div class="mu">long '+f(m-d)+' · short '+f(m+d)+'</div>'}
+ var ni=0;LV.forEach(function(l,i){if(Math.abs(l[1]-m)<Math.abs(LV[ni][1]-m))ni=i});
+ $('lv').innerHTML=LV.map(function(l,i){return '<div class="lv'+(i==ni?' near':'')+'"><span>'+l[0]+' '+l[1]+(i==ni?' ← nearest':'')+'</span><span class="mu">'+(l[1]-m>=0?'+':'')+f(l[1]-m)+'</span></div>'}).join('')
+pos()}catch(e){$('st').textContent='· reconnecting'}}
+
+var E=[];try{E=JSON.parse(localStorage.gdE||'[]')||[]}catch(e){}function sv(){try{localStorage.gdE=JSON.stringify(E)}catch(e){}}
+function add(d){if(prev==null)return;if(E.length>=5){note('Max 5 entries.');return}E.push({d:d,p:prev});sv();note((d>0?'BUY':'SELL')+' #'+E.length+' at '+f(prev));pos()}
+var NT=0;function note(x){var n=$('nt');n.textContent=x;clearTimeout(NT);NT=setTimeout(function(){n.textContent=''},2500)}
+function tap(el,fn){var t=0;el.addEventListener('touchend',function(e){e.preventDefault();t=Date.now();fn()},{passive:false});el.addEventListener('click',function(){if(Date.now()-t>600)fn()})}
+tap($('bB'),function(){add(1)});tap($('bS'),function(){add(-1)});tap($('bC'),function(){E=[];sv();note('All closed');pos()});
+$('pos').addEventListener('click',function(e){var x=e.target.closest('[data-x]');if(x){E.splice(+x.dataset.x,1);sv();pos()}});
+function pos(){var b=$('pos'),t=$('tpx'),R=$('rev');document.body.classList.toggle('inpos',E.length>0);t.style.display='none';R.textContent='';
+ if(!E.length||prev==null){b.style.display='none';return}
+ var m=prev,st=atr?1.5*atr:m*0.003,b2=at(120000),mv2=b2?(m/b2[1]-1)*100:0;b.style.display='block';
+ b.innerHTML=E.map(function(x,i){var d=x.d,tp1=x.p+d*st,lv=LV.map(function(l){return l[1]}).filter(function(v){return d>0?v>tp1:v<tp1}).sort(function(a,c){return d>0?a-c:c-a}),tp2=lv.length?lv[0]:x.p+d*2*st,sl=x.p*(1-d*0.0005),pt=(m-x.p)*d,
+  w='',wc='mu';if(d*(m-sl)<=0){w='⛔ STOP LOSS';wc='dn'}else if(d*(m-tp2)>=0){w='✅ TAKE ALL (TP2)';wc='up'}else if(d*(m-tp1)>=0){w='💰 TAKE PROFIT (TP1)';wc='up'}else if(d*mv2<=-0.02){w='↘ AGAINST YOU';wc='dn'}else if(pt>0&&((d>0&&$('sig').textContent==='SELL')||(d<0&&$('sig').textContent==='BUY'))){w='⚠ SECURE PROFIT';wc='WAITc'}else if(d*mv2>=0.02){w='↗ YOUR WAY';wc='up'}else w='→ Flat';
+  return '<div class="ent"><div class="el"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' #'+(i+1)+'</b> @ '+f(x.p)+'<div class="mu">TP1 '+f(tp1)+' · TP2 '+f(tp2)+' · SL '+f(sl)+'</div></div><div class="ew '+wc+(w.charAt(0)==='→'?'':' bl')+'">'+w+'</div><div class="en '+(pt>=0?'up':'dn')+'">'+(pt>=0?'+':'')+f(pt)+'<div class="mu">'+(pt>=0?'+':'')+(pt/x.p*100).toFixed(3)+'%</div></div><button class="ex" data-x="'+i+'">✕</button></div>'}).join('')}
+candles().then(tick);setInterval(tick,1500);setInterval(candles,60000);
+</script></body></html>
