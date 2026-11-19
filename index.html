@@ -70,7 +70,7 @@ function sel(){var h='';GR.forEach(function(g){h+='<optgroup label="'+g[0]+'">';
 function pivots(H_,L_,C_){var p=(H_+L_+C_)/3;return[['R2',p+(H_-L_)],['R1',2*p-L_],['P',p],['S1',2*p-H_],['S2',p-(H_-L_)]]}
 async function candles(){var sy=SYM;try{
  var a=(await j(API()+'/ohlc?interval=1m&limit=100')).bars.slice().reverse();if(sy!=SYM)return;bars1=a;
- if(!H.length)a.forEach(function(b){H.push([Date.parse(b.openTime)+60000,b.close])});
+ var h0=H.length?H[0][0]:Infinity,sd=[];a.forEach(function(b){var t=Date.parse(b.openTime)+60000;if(t<h0)sd.push([t,b.close])});if(sd.length)H=sd.concat(H);
  var c=(await j(API()+'/ohlc?interval=5m&limit=60')).bars.slice().reverse();if(sy!=SYM)return;var tr=[];
  for(var i=Math.max(1,c.length-15);i<c.length;i++){var p=c[i-1].close;tr.push(Math.max(c[i].high-c[i].low,Math.abs(c[i].high-p),Math.abs(c[i].low-p)))}
  atr=tr.length?tr.reduce(function(s,x){return s+x},0)/tr.length:null;
