@@ -40,7 +40,7 @@ details.card{display:block}details.card>summary{font-weight:700;font-size:15px;c
 .pnr{display:flex;align-items:center;gap:8px;background:#141b23;border-radius:10px;padding:8px 10px;margin-top:6px}.pnr span{flex:1;color:#8b98a5;font-size:13px}.pnr b{font-size:20px}
 .cp,.sm{border:0;border-radius:8px;background:#334155;color:#fff;padding:7px 11px;font-size:14px;font-weight:700;touch-action:manipulation}
 .wr{background:#5f1d1d;color:#ff8080;font-weight:700;font-size:13px;border-radius:8px;padding:8px 10px;margin-top:6px}
-.tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}#who a{color:#8b98a5}
+.tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}.plb{border-top:1px solid #24303c;margin-top:10px;padding-top:8px}.pap{margin:6px 0;font-size:13px;background:#1c2431;border-radius:8px;padding:6px 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pap .sm{margin-left:auto;padding:4px 10px}.pp{color:#c4b5fd}#who a{color:#8b98a5}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -68,9 +68,9 @@ function hKey(u){return 'gdH2_'+String(u||'').toLowerCase()}
 function pushHist(a,it,cap){a=(a||[]).slice();a.unshift(it);cap=cap||HCAP;if(a.length>cap)a.length=cap;return a}
 function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP):[]}catch(e){return[]}}
 function histAdd(st,u,it){if(!u)return[];var a=pushHist(histGet(st,u),it,HCAP);try{st.setItem(hKey(u),JSON.stringify(a))}catch(e){}return a}
-function zoneStrat(n){n=String(n||'');if(/ pivot$/.test(n))return 'Pivot bounce';if(/^Day (high|low)/.test(n))return 'Day high/low reject';if(/FVG/.test(n))return 'FVG retest';if(/^Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
-function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled 5m gap (FVG)':s=='Round-number reject'?'pullback to a round number':'pullback to a zone'}
-function planWhy(d,zn,ent,rr,fx){return 'Trend '+(d>0?'up':'down')+' on 1H+4H (EMA20/50); '+(d>0?'buy':'sell')+' limit at '+zn+' '+fx(ent)+' ('+zoneWhy(zn)+'), R:R 1:'+rr.toFixed(1)}
+function zoneStrat(n){n=String(n||'');if(/FVG/.test(n))return 'FVG retest';if(/Swing/.test(n))return 'Swing high/low reject';if(/Range (high|low)/.test(n))return 'Range edge reject';if(/ pivot/.test(n))return 'Pivot bounce';if(/Day (high|low)/.test(n))return 'Day high/low reject';if(/Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
+function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled gap (FVG)':s=='Round-number reject'?'pullback to a round number':s=='Swing high/low reject'?'pullback to a recent swing level':s=='Range edge reject'?'pullback to the lookback range edge':'pullback to a zone'}
+function planWhy(d,zn,ent,rr,fx,info){info=info||{};return 'Trend '+(d>0?'up':'down')+' on 1H+4H (EMA20/50); '+(d>0?'buy':'sell')+' limit at '+zn+' '+fx(ent)+' ('+zoneWhy(zn)+')'+(info.n>1?'; '+info.n+' zone types line up':'')+(info.tc>0?'; '+info.tc+' past touch'+(info.tc>1?'es':''):'')+', R:R 1:'+rr.toFixed(1)}
 function sigInfo(s,p10,thr,TR){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,mv=(p10>=0?'+':'')+p10.toFixed(3)+'% in 10 min';
  if(s=='WAIT')return{s:s,name:'No signal',why:'Move '+mv+' is under the ±'+thr+'% trigger'};
  var t=td?((s=='BUY')==(td>0)?' · with 1H/4H trend':' · against 1H/4H trend'):'';
@@ -96,12 +96,34 @@ async function pbkHex(pw,saltHex,it){var sb=new Uint8Array(saltHex.match(/../g).
 async function authCheck(u,p){if(String(u||'').trim().toLowerCase()!==GD_AUTH.u)return null;var h=await pbkHex(String(p||''),GD_AUTH.salt,GD_AUTH.it);return h===GD_AUTH.h?h:null}
 function authSessOk(s){return !!(s&&s.u===GD_AUTH.u&&s.k===GD_AUTH.h)}
 function ptFmt(t){if(!t)return '—';var d=new Date(t+288e5),z=function(n){return ('0'+n).slice(-2)};return z(d.getUTCMonth()+1)+'-'+z(d.getUTCDate())+' '+z(d.getUTCHours())+':'+z(d.getUTCMinutes())}
-function closedRow(o){var d=o.d,pts=rnd(d*(o.ext-o.ent),o.dp),lot=+o.lot>0?+o.lot:0.01;return{k:'closed',sym:o.sym,d:d,ty:d>0?'BUY':'SELL',lot:rnd(lot,2),ent:o.ent,ext:o.ext,pts:pts,pl:o.xau?rnd(pts*lot*100,2):null,str:o.str||'Manual',why:o.why||'',ot:o.ot||null,t:o.t,res:o.res||'Closed',r:o.r==null?null:o.r}}
+function closedRow(o){var d=o.d,pts=rnd(d*(o.ext-o.ent),o.dp),lot=+o.lot>0?+o.lot:0.01;return{k:'closed',sym:o.sym,d:d,ty:d>0?'BUY':'SELL',lot:rnd(lot,3),ent:o.ent,ext:o.ext,pts:pts,pl:o.xau?rnd(pts*lot*100,2):null,str:o.str||'Manual',why:o.why||'',ot:o.ot||null,t:o.t,res:o.res||'Closed',r:o.r==null?null:o.r}}
 function groupClose(es,o){var out=[];[1,-1].forEach(function(d){var g=es.filter(function(e){return e.d==d});if(!g.length)return;var sp=0,lot=0,ot=null,strs={};g.forEach(function(e){sp+=e.p;lot+=(+e.lot>0?+e.lot:0.01);if(e.ot&&(ot==null||e.ot<ot))ot=e.ot;strs[e.str||'Manual']=1});var ks=Object.keys(strs);
  out.push(closedRow({sym:o.sym,d:d,lot:lot,ent:rnd(sp/g.length,o.dp),ext:o.ext,xau:o.xau,dp:o.dp,str:ks.length>1?'Mixed':ks[0],why:ks.length>1?'':(g[0].why||''),ot:ot,t:o.t}))});return out}
 function planResultRow(p,st,o){var res=st=='TP1 hit'?'TP1':st=='TP2 hit'?'TP2':'SL',ext=res=='TP1'?p.t1:res=='TP2'?p.t2:p.sl,r=rnd(p.d*(ext-p.ent)/p.rk,2);
  return closedRow({sym:o.sym,d:p.d,lot:p.lot,ent:p.ent,ext:ext,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:p.fl||null,t:o.t,res:res,r:r})}
 function plSummary(rows){var s={n:0,total:0,wins:0,losses:0,flat:0,rate:null,noUsd:0};(rows||[]).forEach(function(r){if(!r||r.k!=='closed')return;s.n++;var v=r.pl!=null?r.pl:r.pts;if(r.pl!=null)s.total+=r.pl;else s.noUsd++;if(v>0)s.wins++;else if(v<0)s.losses++;else s.flat++});s.total=+s.total.toFixed(2);if(s.wins+s.losses>0)s.rate=s.wins/(s.wins+s.losses);return s}
+function lbSpec(w){return w=='7d'?{w:'7d',ms:7*864e5,n5:2016,range:'1h',swing:'4h',fvg:['4h','1d']}:w=='30d'?{w:'30d',ms:30*864e5,n5:8640,range:'1d',swing:'1d',fvg:['1d']}:{w:'24h',ms:864e5,n5:288,range:'5m',swing:'1h',fvg:['1h','4h']}}
+function swings(b,k){k=k||2;var o=[];for(var i=k;i<b.length-k;i++){var h=true,l=true;for(var q=1;q<=k;q++){if(!(b[i].high>b[i-q].high&&b[i].high>b[i+q].high))h=false;if(!(b[i].low<b[i-q].low&&b[i].low<b[i+q].low))l=false}if(h)o.push({p:b[i].high,k:'H',i:i});if(l)o.push({p:b[i].low,k:'L',i:i})}return o}
+function fvgScan(c,mg){var z=[],n=c.length;for(var i=2;i<n;i++){if(c[i].isOpen)continue;if(c[i].low-c[i-2].high>mg)z.push({t:1,lo:c[i-2].high,hi:c[i].low,i:i});else if(c[i-2].low-c[i].high>mg)z.push({t:-1,lo:c[i].high,hi:c[i-2].low,i:i})}
+ return z.filter(function(g){for(var k=g.i+1;k<n;k++){if(g.t>0?c[k].low<=g.lo:c[k].high>=g.hi)return false}return true})}
+function lbWin(b,spec,now){return (b||[]).filter(function(x){return Date.parse(x.openTime)>=now-spec.ms})}
+function lbLevels(spec,data,now,a){var rb=lbWin(data[spec.range],spec,now),sb=lbWin(data[spec.swing],spec,now),hi=-Infinity,lo=Infinity;rb.forEach(function(x){if(x.high>hi)hi=x.high;if(x.low<lo)lo=x.low});
+ var net=rb.length?Math.abs(rb[rb.length-1].close-rb[0].open):0,fv=[];spec.fvg.forEach(function(iv){fvgScan(lbWin(data[iv],spec,now),0.1*(a||0)).forEach(function(g){g.iv=iv;fv.push(g)})});
+ return{w:spec.w,hi:hi,lo:lo,net:net,n:rb.length,swings:swings(sb,2),fvgs:fv,sb:sb,src:{range:spec.range,swing:spec.swing,fvg:spec.fvg.slice()},n5:spec.n5}}
+function touchCount(p,bars,tol){var n=0;(bars||[]).forEach(function(x){if(Math.abs(x.high-p)<=tol||Math.abs(x.low-p)<=tol)n++});return n}
+function planCount(st,a,n5){if(!st||!(st.hi>st.lo)||!(a>0))return 3;var rg=st.hi-st.lo,r=rg/a/Math.sqrt(n5),tr=st.net/rg;if(r>=1.7)return 5;if(tr>=0.6&&r>=1.0)return 5;if(r<1.0||tr<0.25)return 3;return 4}
+function rankSelect(cs,o){var a=o.a,sp=(o.sp||0.5)*a,d=o.d,m=o.m,side=cs.filter(function(c){return d*(m-c.p)>0}),taken=(o.taken||[]).slice(),out=[];
+ var sc=side.map(function(c){var ks={},nm=[c.n];side.forEach(function(x){if(Math.abs(x.p-c.p)<=sp+1e-9&&!ks[x.k]){ks[x.k]=1;if(x!==c&&x.k!==c.k)nm.push(x.n)}});ks[c.k]=1;var kinds=Object.keys(ks),st=kinds.length+0.5*Math.min(c.touches||0,3),dist=d*(m-c.p)/a,r={};for(var q in c)r[q]=c[q];r.kinds=kinds;r.strength=st;r.score=st-0.03*dist;r.dist=dist;r.zn=nm.join(' + ');return r});
+ sc.sort(function(u,w){return w.score-u.score||u.dist-w.dist});
+ for(var i=0;i<sc.length&&out.length<o.N;i++){var c=sc[i],bad=false;for(var j=0;j<taken.length;j++)if(Math.abs(taken[j]-c.p)<sp-1e-9)bad=true;if(bad)continue;if(o.ok&&!o.ok(c))continue;out.push(c);taken.push(c.p)}return out}
+function paperOpen(p,lot,now){lot=+lot>0?+lot:0.01;p.pt={lot:lot,rem:lot,ot:now,t1:false};return p.pt}
+function paperClose(p,ev,o){var pt=p.pt;if(!pt||!(pt.rem>1e-9))return[];var q;if(ev=='TP1 hit'){if(pt.t1)return[];pt.t1=true;q=+(pt.lot/2).toFixed(4);pt.rem=+(pt.rem-q).toFixed(4)}else{q=pt.rem;pt.rem=0}
+ var c={};for(var k in p)c[k]=p[k];c.lot=q;c.fl=pt.ot;var r=planResultRow(c,ev,o);r.paper=true;return[r]}
+function paperExpire(p,m,o){var pt=p.pt;if(!pt||!(pt.rem>1e-9))return[];var q=pt.rem;pt.rem=0;var r=closedRow({sym:o.sym,d:p.d,lot:q,ent:p.ent,ext:m,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:pt.ot,t:o.t,res:'Expired',r:rnd(p.d*(m-p.ent)/p.rk,2)});r.paper=true;return[r]}
+function balKey(u){return 'gdPB2_'+String(u||'').toLowerCase()}
+function balGet(st,u,def){try{var o=JSON.parse(st.getItem(balKey(u))||'null');if(o&&typeof o.bal=='number')return o}catch(e){}return{bal:+def||0,start:+def||0}}
+function balAdd(st,u,pl,def){var o=balGet(st,u,def);if(pl==null||isNaN(pl))return o;o.bal=+(o.bal+pl).toFixed(2);try{st.setItem(balKey(u),JSON.stringify(o))}catch(e){}return o}
+function balReset(st,u,start){var v=+(+start||0).toFixed(2),o={bal:v,start:v};try{st.setItem(balKey(u),JSON.stringify(o))}catch(e){}return o}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -110,7 +132,7 @@ GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]
 ['Indices & Oil',[['US30','Dow 30',2],['USTEC','Nasdaq 100',2],['US500','S&P 500',2],['USOIL','US Oil',3]]],
 ['Stocks',[['AAPL','Apple',2],['TSLA','Tesla',2],['NVDA','Nvidia',2],['MSFT','Microsoft',2]]]],
 DP={},NM={};GR.forEach(function(g){g[1].forEach(function(s){DP[s[0]]=s[2];NM[s[0]]=s[1]})});
-var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:false,trm:'pct',trv:0.05,fvg:true,sig:0.02,spk:0.2,pl:true,plh:4,plrr:2,zp:true,zh:true,zf:true,zr:true};
+var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:false,trm:'pct',trv:0.05,fvg:true,sig:0.02,spk:0.2,pl:true,plh:4,plrr:2,zp:true,zh:true,zf:true,zr:true,zl:true,zs:true,lb:'24h',pap:true};
 var C={};try{C=JSON.parse(localStorage.gdC2||'{}')||{}}catch(e){}for(var k in DEF)if(C[k]===undefined)C[k]=DEF[k];
 function svC(){try{localStorage.gdC2=JSON.stringify(C)}catch(e){}}
 var SYM=localStorage.gdS2;if(!DP[SYM])SYM='XAUUSD';
@@ -137,7 +159,7 @@ async function candles(){var sy=SYM;try{
  FV=z.filter(function(g){for(var k=g.i+1;k<n;k++){if(g.t>0?c[k].low<=g.lo:c[k].high>=g.hi)return false}return true});
  try{var d=(await j(API()+'/ohlc?interval=1d&limit=4')).bars,pb=d.filter(function(b){return !b.isOpen})[0];if(sy!=SYM)return;
   if(pb){LV=pivots(pb.high,pb.low,pb.close);LVsrc='prev day pivots'}}catch(e){}
- try{await tfs(sy)}catch(e){}if(sy!=SYM)return;
+ try{await tfs(sy)}catch(e){}if(sy!=SYM)return;try{await lbLoad(sy)}catch(e){}if(sy!=SYM)return;
  draw()}catch(e){}}
 function draw(){var cv=$('ch'),g=cv.getContext('2d'),W=cv.width,Hh=cv.height;g.clearRect(0,0,W,Hh);if(bars1.length<2)return;
  var v=bars1.map(function(b){return b.close}),mn=Math.min.apply(0,v),mx=Math.max.apply(0,v),r=mx-mn||1;
@@ -207,47 +229,68 @@ function sess(){var c=CAT[SYM],now=Date.now();if(c=='c')return{ok:true,end:null,
  var d=new Date(now),pm=(d.getUTCHours()*60+d.getUTCMinutes()+480)%1440,s,e,w;
  if(c=='f'){s=900;e=60;w='15:00–01:00'}else if(usDst(now)){s=1290;e=240;w='21:30–04:00'}else{s=1350;e=300;w='22:30–05:00'}
  var ok=s<e?(pm>=s&&pm<e):(pm>=s||pm<e);return{ok:ok,end:ok?now+((e-pm+1440)%1440)*60000-(now%60000):null,w:w}}
-function zones(d,m,a){var z=[],T=[],q=lastQ||{};
- if(C.zp&&LVsrc=='prev day pivots')LV.forEach(function(l){z.push({p:l[1],f:l[1],n:l[0]+' pivot'});T.push(l[1])});
- if(C.zh&&q.high>0&&q.low>0){z.push({p:q.high,f:q.high,n:'Day high'});z.push({p:q.low,f:q.low,n:'Day low'});T.push(q.high,q.low)}
- if(C.zf)FV.forEach(function(g){if(d>0){if(g.t>0&&g.hi<m)z.push({p:g.hi,f:g.lo,n:'Bull FVG'});if(g.lo>m)T.push(g.lo)}else{if(g.t<0&&g.lo>m)z.push({p:g.lo,f:g.hi,n:'Bear FVG'});if(g.hi<m)T.push(g.hi)}});
- if(C.zr){var s=ST[SYM]||m*0.002,k=d>0?Math.floor(m/s+1e-9):Math.ceil(m/s-1e-9);for(var i=0;i<4;i++){var p=(k-d*i)*s;p=+p.toFixed(DP[SYM]);z.push({p:p,f:p,n:'Round '+f(p)})}}
- z=z.filter(function(x){return d*(m-x.p)>=0.25*a});z.sort(function(u,w){return d*(w.p-u.p)});return{z:z,T:T}}
-function mkPlan(m,d){var a=atr||m*0.002,Z=zones(d,m,a),zn=Z.z[0];if(!zn)return{why:'no '+(d>0?'support':'resistance')+' zone found '+f(0.25*a)+'+ away'};
- var ent=zn.p,sl=zn.f-d*0.25*a,risk=Math.abs(ent-sl);if(risk<0.5*a){sl=ent-d*0.5*a;risk=0.5*a}
+function zones(d,m,a,lv){var z=[],T=[],q=lastQ||{};
+ function fvz(g,tag){if(d>0){if(g.t>0&&g.hi<m)z.push({p:g.hi,f:g.lo,n:'Bull FVG'+tag,k:'fvg'});if(g.lo>m)T.push(g.lo)}else{if(g.t<0&&g.lo>m)z.push({p:g.lo,f:g.hi,n:'Bear FVG'+tag,k:'fvg'});if(g.hi<m)T.push(g.hi)}}
+ if(C.zp&&LVsrc=='prev day pivots')LV.forEach(function(l){z.push({p:l[1],f:l[1],n:l[0]+' pivot',k:'pivot'});T.push(l[1])});
+ if(C.zh&&q.high>0&&q.low>0){z.push({p:q.high,f:q.high,n:'Day high',k:'dayhl'});z.push({p:q.low,f:q.low,n:'Day low',k:'dayhl'});T.push(q.high,q.low)}
+ if(C.zf)FV.forEach(function(g){fvz(g,'')});
+ if(lv){if(C.zl&&isFinite(lv.hi)&&isFinite(lv.lo)){z.push({p:lv.hi,f:lv.hi,n:'Range high ('+lv.w+')',k:'range'},{p:lv.lo,f:lv.lo,n:'Range low ('+lv.w+')',k:'range'});T.push(lv.hi,lv.lo)}
+  if(C.zs)lv.swings.forEach(function(w){z.push({p:w.p,f:w.p,n:'Swing '+(w.k=='H'?'high':'low'),k:'swing'});T.push(w.p)});
+  if(C.zf)lv.fvgs.forEach(function(g){fvz(g,' '+g.iv)})}
+ if(C.zr){var s=ST[SYM]||m*0.002,k=d>0?Math.floor(m/s+1e-9):Math.ceil(m/s-1e-9);for(var i=0;i<4;i++){var p=(k-d*i)*s;p=+p.toFixed(DP[SYM]);z.push({p:p,f:p,n:'Round '+f(p),k:'round'})}}
+ z=z.filter(function(x){return d*(m-x.p)>=0.25*a});z.forEach(function(x){x.touches=lv?touchCount(x.p,lv.sb,0.5*a):0});return{z:z,T:T}}
+function planFrom(c,Z,m,d,a){var ent=c.p,sl=c.f-d*0.25*a,risk=Math.abs(ent-sl);if(risk<0.5*a){sl=ent-d*0.5*a;risk=0.5*a}
  var T=Z.T.filter(function(v){return d*(v-ent)>0}).sort(function(u,w){return d*(u-w)}),
  L1=T.filter(function(v){return d*(v-ent)>=0.5*risk})[0],t1=(L1!=null&&d*(L1-ent)<1.5*risk)?L1:ent+d*1.5*risk,
  L2=T.filter(function(v){return d*(v-t1)>=0.25*risk})[0],cap=Math.max(3,C.plrr)*risk,t2=(L2!=null&&d*(L2-ent)<cap)?L2:ent+d*cap,rr=Math.abs(t2-ent)/risk;
- return{d:d,ent:ent,sl:sl,t1:t1,t2:t2,rr:rr,zn:zn.n,st:'Waiting',rk:risk,str:zoneStrat(zn.n),why:planWhy(d,zn.n,ent,rr,f)}}
+ return{d:d,ent:ent,sl:sl,t1:t1,t2:t2,rr:rr,zn:c.zn||c.n,st:'Waiting',rk:risk}}
+function mkPlans(m,d,n,taken,lv){var a=atr||m*0.002,Z=zones(d,m,a,lv);if(!Z.z.length)return{plans:[],why:'no '+(d>0?'support':'resistance')+' zone found '+f(0.25*a)+'+ away'};
+ var sel=rankSelect(Z.z,{m:m,d:d,a:a,N:n,sp:0.5,taken:taken,ok:function(c){return planFrom(c,Z,m,d,a).rr>=C.plrr-1e-9}});
+ var plans=sel.map(function(c){var p=planFrom(c,Z,m,d,a);p.str=zoneStrat(p.zn);p.why=planWhy(d,p.zn,p.ent,p.rr,f,{n:c.kinds.length,tc:c.touches||0});return p});
+ return{plans:plans,why:plans.length?'':'no zone has R:R ≥ 1:'+C.plrr+' (or all are too close to open plans)'}}
+var LBD={};
+async function lbLoad(sy){var sp=lbSpec(C.lb);if(LBD.s==sy&&LBD.w==sp.w&&Date.now()-LBD.t<300000)return;var need={'24h':[['5m',300],['1h',48],['4h',12]],'7d':[['1h',200],['4h',60],['1d',10]],'30d':[['1d',40]]}[sp.w],o={s:sy,w:sp.w,t:Date.now(),spec:sp,data:{}};
+ for(var i=0;i<need.length;i++){var b=(await j(API()+'/ohlc?interval='+need[i][0]+'&limit='+need[i][1])).bars.slice().reverse();if(sy!=SYM)return;o.data[need[i][0]]=b}LBD=o}
+function lbNow(a){return LBD.data&&LBD.s==SYM&&LBD.w==lbSpec(C.lb).w?lbLevels(LBD.spec,LBD.data,Date.now(),a):null}
+function PLs(){var v=PLA[SYM];if(!v)return PLA[SYM]=[];if(!Array.isArray(v))v=PLA[SYM]=[v];return v}
+function logClosed(r){pushH(r);try{balAdd(localStorage,USER,r.pl,PN.acct>0?PN.acct:80)}catch(e){}}
 var AX=null;function beep(){try{AX=AX||new (window.AudioContext||window.webkitAudioContext)();var o=AX.createOscillator(),g=AX.createGain();o.connect(g);g.connect(AX.destination);o.frequency.value=880;g.gain.value=0.15;o.start();o.stop(AX.currentTime+0.25)}catch(e){}try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
 function pst(p,s,now){p.st=s;if(s=='Expired'||s=='Cancelled'||s=='SL hit'||s=='TP2 hit')p.cl=now}
 function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
- var now=Date.now(),p=PLA[SYM],a=atr||m*0.002,live=p&&!p.cl;
- if(live){var o=p.st;
-  if(now>p.ex)pst(p,'Expired',now);
+ var now=Date.now(),a=atr||m*0.002,L=PLs(),ctx={sym:SYM,xau:isXau(),dp:DP[SYM],t:now};
+ L.forEach(function(p){if(p.cl)return;var o=p.st;
+  if(now>p.ex){if(p.fl&&p.pt&&p.pt.rem>0)paperExpire(p,m,ctx).forEach(logClosed);pst(p,'Expired',now)}
   else if(!closed){var d=p.d;
    if(!p.fl){if(d*(m-p.sl)<=0)pst(p,'Cancelled',now);else if(d*(m-p.ent)<=0){p.fl=now;pst(p,'Filled',now)}else pst(p,Math.abs(m-p.ent)<=0.25*a?'Near entry':'Waiting',now)}
    else{if(d*(m-p.sl)<=0)pst(p,'SL hit',now);else if(d*(m-p.t2)>=0)pst(p,'TP2 hit',now);else if(!p.t1h&&d*(m-p.t1)>=0){p.t1h=1;pst(p,'TP1 hit',now)}}}
-  if(p.st!=o){svP();if(p.st=='TP1 hit'||p.st=='TP2 hit'||p.st=='SL hit')logPlan(p);if(!(o=='Near entry'&&p.st=='Waiting')){var al=SYM+' plan: '+p.st.toUpperCase()+(p.st=='SL hit'&&p.t1h?' (after TP1)':'');note(al);beep();$('plc').dataset.al=al}}}
- var cks=null,msg='',h1=TR['1h'],h4=TR['4h'],se=sess();
- if(!p||(p.cl&&now-p.cl>PLCD)){
-  var tr=h1&&h4&&h1.d==h4.d&&h1.d!=0;cks=[['Trend agrees',!h1||!h4?null:tr],['Market open',!closed],['Session good ('+se.w+' PHT)',se.ok],['R:R ≥ 1:'+C.plrr,null]];
-  if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!tr)msg='No plan, timeframes disagree';else if(closed)msg='No plan, market closed';else if(!se.ok)msg='No plan, outside good session ('+se.w+' PHT)';
-  else{var n=mkPlan(m,h1.d);if(n.why)msg='No plan, '+n.why;else{cks[3][1]=n.rr>=C.plrr-1e-9;
-    if(!cks[3][1])msg='No plan, R:R 1:'+n.rr.toFixed(1)+' is below 1:'+C.plrr+' ('+(n.d>0?'Buy':'Sell')+' Limit '+f(n.ent)+' · '+n.zn+')';
-    else{n.ct=now;n.lot=curLot();n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);delete PLA[SYM];PLA[SYM]=n;p=n;svP();note(SYM+' new '+(n.d>0?'BUY':'SELL')+' LIMIT plan @ '+f(n.ent))}}}
-  if(!(p&&p.ct))p=null}
- rplan(m,p,cks,msg,h1,h4)}
+  if(p.st!=o){if(p.st=='Filled'&&C.pap&&!p.pt)paperOpen(p,curLot(),now);
+   if(p.st=='TP1 hit'||p.st=='TP2 hit'||p.st=='SL hit')paperClose(p,p.st,ctx).forEach(logClosed);
+   svP();if(!(o=='Near entry'&&p.st=='Waiting')){var al=SYM+' plan @'+f(p.ent)+': '+p.st.toUpperCase()+(p.st=='SL hit'&&p.t1h?' (after TP1)':'')+(p.pt&&p.st!='Cancelled'&&p.st!='Waiting'&&p.st!='Near entry'?' · PAPER':'');note(al);beep();$('plc').dataset.al=al}}});
+ for(var i=L.length-1;i>=0;i--)if(L[i].cl&&now-L[i].cl>1800000){L.splice(i,1);svP()}
+ var h1=TR['1h'],h4=TR['4h'],se=sess(),active=L.filter(function(p){return !p.cl}).length,msg='',lv=lbNow(a),N=lv?planCount(lv,a,lv.n5):null,
+ tr=h1&&h4&&h1.d==h4.d&&h1.d!=0,cks=[['Trend agrees',!h1||!h4?null:tr],['Market open',!closed],['Session good ('+se.w+' PHT)',se.ok],['R:R ≥ 1:'+C.plrr,null]];
+ if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!lv)msg='Loading '+C.lb+' lookback…';else if(!tr)msg='No new plans, timeframes disagree';else if(closed)msg='No new plans, market closed';else if(!se.ok)msg='No new plans, outside good session ('+se.w+' PHT)';
+ else if(active<N){var cl=L.map(function(p){return p.ent}),r=mkPlans(m,h1.d,N-active,cl,lv);cks[3][1]=r.plans.length>0?true:false;
+  r.plans.forEach(function(n){n.ct=now;n.lot=curLot();n.id=now+'-'+n.ent.toFixed(DP[SYM]);n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);L.push(n)});
+  if(r.plans.length){svP();note(SYM+' '+r.plans.length+' new '+(h1.d>0?'BUY':'SELL')+' LIMIT plan'+(r.plans.length>1?'s':''))}
+  else if(!active)msg='No plan, '+r.why}
+ rplan(m,L,cks,msg,h1,h4,N,lv)}
 function svP(){try{localStorage.gdPL2=JSON.stringify(PLA)}catch(e){}}
 function tg(t){return t?(t.d>0?'<span class="up">▲ up</span>':t.d<0?'<span class="dn">▼ down</span>':'<span class="mu">▬ flat</span>'):'…'}
 function ckh(l){return l.map(function(x){return '<span class="ck '+(x[1]===null?'mu':x[1]?'up':'dn')+'">'+(x[1]===null?'–':x[1]?'✓':'✗')+' '+x[0]+'</span>'}).join('')}
-function rplan(m,p,cks,msg,h1,h4){var c=$('plc'),a=atr||m*0.002,now=Date.now(),h='<div class="mu">Trade plan · '+SYM+' · 1H '+tg(h1)+' · 4H '+tg(h4)+'</div>';
- if(p&&p.ct){var d=p.d,r=p.rk,sc=p.cl?(p.st=='TP2 hit'?'up':p.st=='SL hit'?'dn':'mu'):p.st=='Waiting'?'WAITc':p.st=='Near entry'?'WAITc bl':p.st=='SL hit'?'dn':'up',left=p.ex-now;
-  cks=[['Trend agrees',true],['Market open',!closed],['Session good',true],['R:R 1:'+p.rr.toFixed(1)+' OK',true]];
-  h+='<div class="plh"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' LIMIT @ '+f(p.ent)+'</b><span class="pls '+sc+'">'+p.st+'</span></div><div class="mu">Zone: '+p.zn+' · '+f(Math.abs(m-p.ent))+(p.ent>m?' above':' below')+' price</div><div class="mu">Strategy: <b>'+(p.str||zoneStrat(p.zn))+'</b>'+(p.why?'<br>'+p.why:'')+'</div>'+
-  '<div class="plg"><div><span class="mu">SL</span><br><b class="dn">'+f(p.sl)+'</b></div><div><span class="mu">TP1</span><br><b class="up">'+f(p.t1)+'</b></div><div><span class="mu">TP2</span><br><b class="up">'+f(p.t2)+'</b></div><div><span class="mu">R:R</span><br><b>1:'+p.rr.toFixed(1)+'</b></div></div>'+
-  '<div class="mu">'+(p.cl?'Closed '+hhmm(p.cl)+' PHT · new plan in '+Math.max(0,Math.ceil((PLCD-(now-p.cl))/1000))+'s':'Valid until '+hhmm(p.ex)+' PHT · '+(left>0?Math.floor(left/36e5)+'h '+('0'+Math.floor(left%36e5/6e4)).slice(-2)+'m '+('0'+Math.floor(left%6e4/1000)).slice(-2)+'s left':'expired')+(p.fl?' · filled '+hhmm(p.fl):''))+'</div>'}
- else h+='<div class="plh"><b class="WAITc">'+msg+'</b></div>';
+function rplan(m,L,cks,msg,h1,h4,N,lv){var c=$('plc'),a=atr||m*0.002,now=Date.now(),vis=L.filter(function(p){return !p.cl||now-p.cl<=PLCD}),act=L.filter(function(p){return !p.cl}).length,
+ h='<div class="mu">Trade plans · '+SYM+' · 1H '+tg(h1)+' · 4H '+tg(h4)+' · lookback '+C.lb+(N?' · up to '+N+' plans':'')+'</div>';
+ var pb=USER?balGet(localStorage,USER,PN.acct>0?PN.acct:80):null;
+ h+='<div class="pap"><b>PAPER / demo</b> · '+(C.pap?'auto-trade ON':'auto-trade OFF')+(pb?' · balance <b class="'+(pb.bal>=pb.start?'up':'dn')+'">$'+pb.bal.toFixed(2)+'</b> <span class="mu">(start $'+pb.start.toFixed(2)+')</span>':'')+' <button id="pbr" class="sm">Reset</button></div>';
+ if(vis.length){vis.sort(function(u,w){return u.d*(w.ent-u.ent)});
+  vis.forEach(function(p){var d=p.d,sc=p.cl?(p.st=='TP2 hit'?'up':p.st=='SL hit'?'dn':'mu'):p.st=='Waiting'?'WAITc':p.st=='Near entry'?'WAITc bl':'up',left=p.ex-now,
+   pt=p.pt?'<div class="mu">PAPER trade · '+(+p.pt.lot.toFixed(3))+' lot'+(p.pt.rem>0?' open'+(p.pt.t1?' (half closed at TP1)':''):' closed')+'</div>':'';
+   h+='<div class="plb"><div class="plh"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' LIMIT @ '+f(p.ent)+'</b><span class="pls '+sc+'">'+p.st+'</span></div><div class="mu">Zone: '+p.zn+' · '+f(Math.abs(m-p.ent))+(p.ent>m?' above':' below')+' price</div><div class="mu">Strategy: <b>'+(p.str||zoneStrat(p.zn))+'</b>'+(p.why?'<br>'+p.why:'')+'</div>'+
+   '<div class="plg"><div><span class="mu">SL</span><br><b class="dn">'+f(p.sl)+'</b></div><div><span class="mu">TP1</span><br><b class="up">'+f(p.t1)+'</b></div><div><span class="mu">TP2</span><br><b class="up">'+f(p.t2)+'</b></div><div><span class="mu">R:R</span><br><b>1:'+p.rr.toFixed(1)+'</b></div></div>'+pt+
+   '<div class="mu">'+(p.cl?'Closed '+hhmm(p.cl)+' PHT':'Valid until '+hhmm(p.ex)+' PHT · '+(left>0?Math.floor(left/36e5)+'h '+('0'+Math.floor(left%36e5/6e4)).slice(-2)+'m left':'expired')+(p.fl?' · filled '+hhmm(p.fl):''))+'</div></div>'});
+  cks=[['Trend agrees',true],['Market open',!closed],['Session good',true],['R:R ≥ 1:'+C.plrr+' each',true]]}
+ if(msg&&act==0)h+='<div class="plh"><b class="WAITc">'+msg+'</b></div>';else if(msg&&act<N)h+='<div class="mu">'+msg+'</div>';
+ else if(N&&act<N&&vis.length)h+='<div class="mu">Showing '+act+' of up to '+N+': no more valid zones right now (never padded).</div>';
  h+='<div class="cks">'+ckh(cks)+'</div>';c.innerHTML=h;c.style.display='block'}
 // settings
 function ps(){return prev||(lastQ&&lastQ.mid)||1}
@@ -263,13 +306,14 @@ function rcfg(){$('cfg').firstChild.innerHTML='<h2>⚙ Strategy <button id="cx">
  '<div class="fr"><span>Breakeven after TP1</span>'+ck('be')+'</div>'+
  '<div class="fr"><span>Trailing stop</span>'+ck('tr')+'</div><div class="fr"><span>Trail distance</span>'+so('trm',[['pct','%'],['atr','× ATR']])+nr('trv','any',0)+'</div>'+
  '<h3>Pending orders (alerts)</h3><div class="mu">'+SYM+' now '+(prev!=null?f(prev):'—')+'</div><div class="fr"><select id="pk" style="width:auto;flex:1"><option value="BS">Buy Stop</option><option value="BL">Buy Limit</option><option value="SS">Sell Stop</option><option value="SL">Sell Limit</option></select><input id="pv" type="number" inputmode="decimal" step="any" placeholder="price" style="width:110px"><button id="pa">Add</button></div><div id="pm" class="mu"></div>'+
+ '<h3>Trade plans</h3><div class="fr"><span>Auto trade plans</span>'+ck('pl')+'</div><div class="fr"><span>Lookback (zones and plan count)</span>'+so('lb',[['24h','24 hours'],['7d','7 days'],['30d','30 days']])+'</div><div class="fr"><span>Plan valid (hours)</span>'+nr('plh','any',0.5)+'</div><div class="fr"><span>Min R:R (1 : x)</span>'+nr('plrr','any',1)+'</div><div class="fr"><span>Zones: pivots</span>'+ck('zp')+'</div><div class="fr"><span>Zones: day high/low</span>'+ck('zh')+'</div><div class="fr"><span>Zones: FVGs</span>'+ck('zf')+'</div><div class="fr"><span>Zones: round numbers</span>'+ck('zr')+'</div><div class="fr"><span>Zones: lookback range high/low</span>'+ck('zl')+'</div><div class="fr"><span>Zones: swing highs/lows</span>'+ck('zs')+'</div><div class="fr"><span>PAPER / demo auto-trade</span>'+ck('pap')+'</div><div class="mu">Plans open a paper trade when price touches the entry. No broker, no real money.</div>'+
  '<h3>FVG detector</h3><div class="fr"><span>Show fair value gaps (5m)</span>'+ck('fvg')+'</div>'+
  '<h3>Signal sensitivity</h3><div class="fr"><span>10-min signal %</span>'+nr('sig','any',0)+'</div><div class="fr"><span>Spike % (2 min)</span>'+nr('spk','any',0)+'</div>'+
  '<div class="fr" style="margin-top:16px"><button id="cr">Reset defaults</button></div>'}
 function opc(){rcfg();$('cfg').style.display='block'}
 tap($('gb'),opc);
 $('cfg').addEventListener('click',function(e){var t=e.target;if(t.id=='cx'){$('cfg').style.display='none'}
- else if(t.id=='pn'){delete PLA[SYM];svP();$('pm').textContent='';tick()}
+ else if(t.id=='pn'){PLA[SYM]=[];svP();tick()}
  else if(t.id=='cr'){C={};for(var k in DEF)C[k]=DEF[k];svC();rcfg();tick()}
  else if(t.id=='pa'){var v=parseFloat($('pv').value),k=$('pk').value,n=PN[k],m=prev,pm=$('pm');
   if(!(v>0)){pm.textContent='Type a price.';return}if(m==null){pm.textContent='Wait for price.';return}
@@ -282,25 +326,26 @@ $('cfg').addEventListener('change',function(e){var t=e.target,k=t.dataset.k;if(!
  if(k=='t1m')C.t1v={rr:1,atr:1.5,pts:+(m*0.0015).toFixed(dp),lvl:0}[v];
  if(k=='t2m')C.t2v={rr:2,atr:3,pts:+(m*0.003).toFixed(dp),lvl:0}[v];
  if(k=='trm')C.trv=v=='pct'?0.05:1;
+ if(k=='lb'){LBD={};var L0=PLs();for(var q=L0.length-1;q>=0;q--)if(!L0[q].fl&&!L0[q].cl)L0.splice(q,1);svP();note('Lookback '+v+': plans refreshed');candles().then(tick)}
  svC();if(t.dataset.m)rcfg();if(prev!=null){tick()}});
 $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS2=SYM}catch(e){}
- H=[];prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
+ H=[];prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};LBD={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
  $('lv').innerHTML='';$('fvc').style.display='none';$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
 /* ---- history / signal / planner UI ---- */
 var USER=null,booted=false,SIG=null;
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
 function usd(v){return (v>=0?'+$':'-$')+Math.abs(v).toFixed(2)}
-function rhist(){var a=USER?histGet(localStorage,USER):[],S=plSummary(a),h='';
+function rhist(){var a=USER?histGet(localStorage,USER):[],S=plSummary(a),pb=USER?balGet(localStorage,USER,PN.acct>0?PN.acct:80):null,h=pb?'<div class="mu">PAPER / demo balance <b class="'+(pb.bal>=pb.start?'up':'dn')+'">$'+pb.bal.toFixed(2)+'</b> (start $'+pb.start.toFixed(2)+')</div>':'';
  $('hsm').innerHTML='📜 Past P/L · <span class="'+(S.total>0?'up':S.total<0?'dn':'mu')+'">'+(S.n?usd(S.total):'$0.00')+'</span> <span class="mu">('+a.length+'/'+HCAP+')</span>';
  if(S.n)h+='<div class="plg" style="margin:8px 0"><div><span class="mu">Total P/L</span><br><b class="'+(S.total>0?'up':S.total<0?'dn':'')+'">'+usd(S.total)+'</b></div><div><span class="mu">Wins</span><br><b class="up">'+S.wins+'</b></div><div><span class="mu">Losses</span><br><b class="dn">'+S.losses+'</b></div><div><span class="mu">Win rate</span><br><b>'+(S.rate==null?'—':Math.round(S.rate*100)+'%')+'</b></div></div>'+(S.noUsd?'<div class="mu">Total $ counts XAUUSD trades only; '+S.noUsd+' other-symbol trade(s) show points.</div>':'');
  h+=a.length?a.map(function(x){var dp=DP[x.sym]!=null?DP[x.sym]:2,fx=function(v){return v==null?'—':(+v).toFixed(dp)};
   if(x.k=='closed'){var v=x.pl!=null?x.pl:x.pts,c=v>0?'up':v<0?'dn':'mu';
-   return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' · '+x.lot+' lot'+(x.res!='Closed'?' · <b>'+x.res+'</b>'+(x.r!=null?' ('+(x.r>0?'+':'')+x.r+'R)':''):'')+'<div class="mu">'+fx(x.ent)+' → '+fx(x.ext)+' · '+(x.pts>0?'+':'')+fx(x.pts)+' pts</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">'+ptFmt(x.ot)+' → '+ptFmt(x.t)+' PHT</div></div><div class="en '+c+'">'+(x.pl!=null?usd(x.pl):(x.pts>0?'+':'')+fx(x.pts)+'<div class="mu">pts</div>')+'</div></div>'}
+   return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' · '+x.lot+' lot'+(x.paper?' · <b class="pp">PAPER</b>':'')+(x.res!='Closed'?' · <b>'+x.res+'</b>'+(x.r!=null?' ('+(x.r>0?'+':'')+x.r+'R)':''):'')+'<div class="mu">'+fx(x.ent)+' → '+fx(x.ext)+' · '+(x.pts>0?'+':'')+fx(x.pts)+' pts</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">'+ptFmt(x.ot)+' → '+ptFmt(x.t)+' PHT</div></div><div class="en '+c+'">'+(x.pl!=null?usd(x.pl):(x.pts>0?'+':'')+fx(x.pts)+'<div class="mu">pts</div>')+'</div></div>'}
   return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' @ '+fx(x.ent)+'<div class="mu">SL '+fx(x.sl)+' · TP '+fx(x.tp)+(x.tp2!=null?' · TP2 '+fx(x.tp2):'')+(x.lot?' · lot '+x.lot:'')+(x.risk!=null?' · risk $'+x.risk:'')+'</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">not a trade · '+ptFmt(x.t)+' PHT</div></div></div>'}).join(''):'<div class="mu">No closed trades yet. Tap ✕ on an entry or CLOSE, or let a trade plan hit TP/SL, and the result shows here (latest '+HCAP+' kept, oldest deleted).</div>';
  $('hsb').innerHTML=h+(a.length?'<button id="hcl" class="sm" style="margin-top:8px">Clear history</button>':'')}
 function curLot(){return PN&&+PN.lot>0?+PN.lot:0.01}
 function isXau(){return SYM=='XAUUSD'}
-function logRows(rows){rows.forEach(function(r){pushH(r)})}
+function logRows(rows){rows.forEach(logClosed)}
 function closeEntries(idx,all){var L=E(),sel_=all?L.slice():idx.map(function(i){return L[i]}).filter(Boolean);if(!sel_.length||prev==null)return;
  logRows(groupClose(sel_,{sym:SYM,ext:prev,xau:isXau(),dp:DP[SYM],t:Date.now()}).map(function(r){return r}))}
 function logPlan(p){try{pushH(planResultRow(p,p.st,{sym:SYM,xau:isXau(),dp:DP[SYM],t:Date.now()}))}catch(e){}}
@@ -338,6 +383,7 @@ $('tpb').addEventListener('input',function(e){var id=e.target.id,v=pnVal(id);
 $('tpb').addEventListener('change',function(e){if(e.target.id=='pnT'){PN.k=e.target.value;PN.off=otOf(PN.k)[3];pnSv();pnSync();pnOut()}});
 $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp')cpy(t.dataset.c,t);
  else if(t.id=='pnSave'&&PNR&&PNR.ok){var r=PNR;pushH({k:'calc',ty:r.name.toUpperCase(),d:r.d,ent:r.ent,sl:r.sl,tp:r.tp,lot:PN.lot,risk:r.risk,str:'Manual planner',why:'Saved from the trade planner'+(r.xau?'':' (price levels only)')});t.textContent='Saved ✓';setTimeout(function(){t.textContent='Save to history'},1200)}});
+$('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset PAPER balance to your planner account ($'+(PN.acct>0?PN.acct:80)+')?')){balReset(localStorage,USER,PN.acct>0?PN.acct:80);rhist();tick()}});
 $('hsb').addEventListener('click',function(e){if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
 function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000)}
