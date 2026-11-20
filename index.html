@@ -40,7 +40,7 @@ details.card{display:block}details.card>summary{font-weight:700;font-size:15px;c
 .pnr{display:flex;align-items:center;gap:8px;background:#141b23;border-radius:10px;padding:8px 10px;margin-top:6px}.pnr span{flex:1;color:#8b98a5;font-size:13px}.pnr b{font-size:20px}
 .cp,.sm{border:0;border-radius:8px;background:#334155;color:#fff;padding:7px 11px;font-size:14px;font-weight:700;touch-action:manipulation}
 .wr{background:#5f1d1d;color:#ff8080;font-weight:700;font-size:13px;border-radius:8px;padding:8px 10px;margin-top:6px}
-.tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}.plb{border-top:1px solid #24303c;margin-top:10px;padding-top:8px}.pap{margin:6px 0;font-size:13px;background:#1c2431;border-radius:8px;padding:6px 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pap .sm{margin-left:auto;padding:4px 10px}.pp{color:#c4b5fd}#who a{color:#8b98a5}
+.tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}.plb{border-top:1px solid #24303c;margin-top:10px;padding-top:8px}.pap{margin:6px 0;font-size:13px;background:#1c2431;border-radius:8px;padding:6px 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pap .sm{margin-left:auto;padding:4px 10px}.pp{color:#c4b5fd}.bxs{display:flex;gap:8px;margin:8px 0}.bx{flex:1;background:#141b23;border-radius:10px;padding:8px;text-align:center}.bx b{font-size:20px}.bx .sm{margin-top:6px;padding:4px 10px}.hf{display:flex;gap:6px}.hf .sm.on{background:#f5c542;color:#111}#who a{color:#8b98a5}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -78,17 +78,17 @@ function sigInfo(s,p10,thr,TR){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1
 var OT=[['mb','Market Buy',1,0],['ms','Market Sell',-1,0],['bl','Buy Limit',1,-10],['sl','Sell Limit',-1,10],['bs','Buy Stop',1,10],['ss','Sell Stop',-1,-10]];
 function otOf(k){for(var i=0;i<OT.length;i++)if(OT[i][0]==k)return OT[i];return OT[0]}
 function rnd(x,dp){return +(+x).toFixed(dp)}
-function pnCalc(o){var t=otOf(o.k),d=t[2],mkt=t[0]=='mb'||t[0]=='ms',w=[],dp=o.dp,price=+o.price,lot=+o.lot,sd=+o.slD,td=+o.tpD,ac=+o.acct,off=mkt?0:+o.off;
+function pnCalc(o){var sym=o.sym||(o.xau?'XAUUSD':null),t=otOf(o.k),d=t[2],mkt=t[0]=='mb'||t[0]=='ms',w=[],dp=o.dp,price=+o.price,lot=+o.lot,sd=+o.slD,td=+o.tpD,ac=+o.acct,off=mkt?0:+o.off;
  if(!(price>0))return{ok:false,warn:['Waiting for live price…'],name:t[1],d:d};
  if(!(sd>0))w.push('SL distance must be above 0');if(!(td>0))w.push('TP distance must be above 0');if(!(lot>0))w.push('Lot must be above 0');
  if(isNaN(off))w.push('Type an entry offset');
  if(!mkt&&!isNaN(off)){var pend=t[0]=='bl'||t[0]=='ss'?'below':'above',okd=pend=='below'?off<0:off>0;if(!okd)w.push(t[1]+' entry must be '+pend+' the live price (offset '+(pend=='below'?'negative':'positive')+')')}
- var ent=rnd(price+(isNaN(off)?0:off),dp),sl=rnd(ent-d*(sd||0),dp),tp=rnd(ent+d*(td||0),dp),r={ok:true,name:t[1],d:d,mkt:mkt,ent:ent,sl:sl,tp:tp,xau:!!o.xau,warn:w,risk:null,rew:null,rr:null,pct:null};
+ var ent=rnd(price+(isNaN(off)?0:off),dp),sl=rnd(ent-d*(sd||0),dp),tp=rnd(ent+d*(td||0),dp),r={ok:true,name:t[1],d:d,mkt:mkt,ent:ent,sl:sl,tp:tp,xau:sym=='XAUUSD',sym:sym,warn:w,risk:null,rew:null,rr:null,pct:null};
  if(sd>0&&td>0)r.rr=Math.abs(tp-ent)/Math.abs(ent-sl);
- if(o.xau){if(lot>0&&sd>0)r.risk=rnd(Math.abs(ent-sl)*lot*100,2);if(lot>0&&td>0)r.rew=rnd(Math.abs(tp-ent)*lot*100,2);
+ if(sym&&CS[sym]){if(lot>0&&sd>0)r.risk=rnd(plUsd(sym,Math.abs(ent-sl),lot,price),2);if(lot>0&&td>0)r.rew=rnd(plUsd(sym,Math.abs(tp-ent),lot,price),2);
   if(r.risk!=null&&ac>0){r.pct=r.risk/ac*100;if(r.risk>ac*0.1+1e-9)w.push('Risk $'+r.risk.toFixed(2)+' is '+r.pct.toFixed(0)+'% of your $'+ac+' account (over 10%)')}
   if(lot>=0.03-1e-9&&ac<=80)w.push('Lot '+lot+' is too big for a $'+ac+' account (use 0.01)');
-  if(sd>0&&sd<10)w.push('Stop is tighter than $10: easy to get stopped out')}
+  if(sym=='XAUUSD'&&sd>0&&sd<10)w.push('Stop is tighter than $10: easy to get stopped out')}
  return r}
 var GD_AUTH={u:'dan',name:'Dan Sorix',salt:'382629c3356e57b81989ba5d72dd845a',it:200000,h:'5639fc59f317a3b28224925f5f03a82bd404703bc62fd6d21e0b1ef7f195f890'};
 function hexOf(b){return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
@@ -96,12 +96,17 @@ async function pbkHex(pw,saltHex,it){var sb=new Uint8Array(saltHex.match(/../g).
 async function authCheck(u,p){if(String(u||'').trim().toLowerCase()!==GD_AUTH.u)return null;var h=await pbkHex(String(p||''),GD_AUTH.salt,GD_AUTH.it);return h===GD_AUTH.h?h:null}
 function authSessOk(s){return !!(s&&s.u===GD_AUTH.u&&s.k===GD_AUTH.h)}
 function ptFmt(t){if(!t)return '—';var d=new Date(t+288e5),z=function(n){return ('0'+n).slice(-2)};return z(d.getUTCMonth()+1)+'-'+z(d.getUTCDate())+' '+z(d.getUTCHours())+':'+z(d.getUTCMinutes())}
-function closedRow(o){var d=o.d,pts=rnd(d*(o.ext-o.ent),o.dp),lot=+o.lot>0?+o.lot:0.01;return{k:'closed',sym:o.sym,d:d,ty:d>0?'BUY':'SELL',lot:rnd(lot,3),ent:o.ent,ext:o.ext,pts:pts,pl:o.xau?rnd(pts*lot*100,2):null,str:o.str||'Manual',why:o.why||'',ot:o.ot||null,t:o.t,res:o.res||'Closed',r:o.r==null?null:o.r}}
+function closedRow(o){var d=o.d,pts=rnd(d*(o.ext-o.ent),o.dp),lot=+o.lot>0?+o.lot:0.01;return{k:'closed',sym:o.sym,d:d,ty:d>0?'BUY':'SELL',lot:rnd(lot,3),ent:o.ent,ext:o.ext,pts:pts,pl:(function(){var u=plUsd(o.sym,pts,lot,o.ext);return u==null?null:rnd(u,2)})(),src:o.src||'manual',str:o.str||'Manual',why:o.why||'',ot:o.ot||null,t:o.t,res:o.res||'Closed',r:o.r==null?null:o.r}}
 function groupClose(es,o){var out=[];[1,-1].forEach(function(d){var g=es.filter(function(e){return e.d==d});if(!g.length)return;var sp=0,lot=0,ot=null,strs={};g.forEach(function(e){sp+=e.p;lot+=(+e.lot>0?+e.lot:0.01);if(e.ot&&(ot==null||e.ot<ot))ot=e.ot;strs[e.str||'Manual']=1});var ks=Object.keys(strs);
  out.push(closedRow({sym:o.sym,d:d,lot:lot,ent:rnd(sp/g.length,o.dp),ext:o.ext,xau:o.xau,dp:o.dp,str:ks.length>1?'Mixed':ks[0],why:ks.length>1?'':(g[0].why||''),ot:ot,t:o.t}))});return out}
 function planResultRow(p,st,o){var res=st=='TP1 hit'?'TP1':st=='TP2 hit'?'TP2':'SL',ext=res=='TP1'?p.t1:res=='TP2'?p.t2:p.sl,r=rnd(p.d*(ext-p.ent)/p.rk,2);
  return closedRow({sym:o.sym,d:p.d,lot:p.lot,ent:p.ent,ext:ext,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:p.fl||null,t:o.t,res:res,r:r})}
 function plSummary(rows){var s={n:0,total:0,wins:0,losses:0,flat:0,rate:null,noUsd:0};(rows||[]).forEach(function(r){if(!r||r.k!=='closed')return;s.n++;var v=r.pl!=null?r.pl:r.pts;if(r.pl!=null)s.total+=r.pl;else s.noUsd++;if(v>0)s.wins++;else if(v<0)s.losses++;else s.flat++});s.total=+s.total.toFixed(2);if(s.wins+s.losses>0)s.rate=s.wins/(s.wins+s.losses);return s}
+var CS={XAUUSD:{size:100,q:'USD',u:'oz'},XAGUSD:{size:5000,q:'USD',u:'oz'},XPTUSD:{size:100,q:'USD',u:'oz'},EURUSD:{size:100000,q:'USD',u:'units'},GBPUSD:{size:100000,q:'USD',u:'units'},AUDUSD:{size:100000,q:'USD',u:'units'},NZDUSD:{size:100000,q:'USD',u:'units'},USDJPY:{size:100000,q:'JPY',u:'units'},USDCAD:{size:100000,q:'CAD',u:'units'},USDCHF:{size:100000,q:'CHF',u:'units'},BTCUSD:{size:1,q:'USD',u:'BTC'},ETHUSD:{size:1,q:'USD',u:'ETH'},US30:{size:1,q:'USD',u:'$/pt'},USTEC:{size:1,q:'USD',u:'$/pt'},US500:{size:1,q:'USD',u:'$/pt'},USOIL:{size:1000,q:'USD',u:'bbl'},AAPL:{size:1,q:'USD',u:'share'},TSLA:{size:1,q:'USD',u:'share'},NVDA:{size:1,q:'USD',u:'share'},MSFT:{size:1,q:'USD',u:'share'}};
+function plUsd(sym,pts,lot,rate){var c=CS[sym];if(!c)return null;var v=pts*lot*c.size;if(c.q!='USD'){if(!(rate>0))return null;v=v/rate}return rnd(v,6)}
+function pnDefaultsFor(sym,price){if(sym=='XAUUSD'||!(price>0))return{off:10,slD:15};var k=15/3500,g=function(x){return +x.toPrecision(2)};return{off:g(price*k*10/15),slD:g(price*k)}}
+function planCap(a4,a5,plh){var f=Math.sqrt((plh>0?plh:4)/4);if(a4>0)return 3*a4*f;if(a5>0)return 3*a5*Math.sqrt(48)*f;return Infinity}
+function srcOf(r){return r&&r.src?r.src:(r&&r.paper?'auto':'manual')}
 function lbSpec(w){return w=='7d'?{w:'7d',ms:7*864e5,n5:2016,range:'1h',swing:'4h',fvg:['4h','1d']}:w=='30d'?{w:'30d',ms:30*864e5,n5:8640,range:'1d',swing:'1d',fvg:['1d']}:{w:'24h',ms:864e5,n5:288,range:'5m',swing:'1h',fvg:['1h','4h']}}
 function swings(b,k){k=k||2;var o=[];for(var i=k;i<b.length-k;i++){var h=true,l=true;for(var q=1;q<=k;q++){if(!(b[i].high>b[i-q].high&&b[i].high>b[i+q].high))h=false;if(!(b[i].low<b[i-q].low&&b[i].low<b[i+q].low))l=false}if(h)o.push({p:b[i].high,k:'H',i:i});if(l)o.push({p:b[i].low,k:'L',i:i})}return o}
 function fvgScan(c,mg){var z=[],n=c.length;for(var i=2;i<n;i++){if(c[i].isOpen)continue;if(c[i].low-c[i-2].high>mg)z.push({t:1,lo:c[i-2].high,hi:c[i].low,i:i});else if(c[i-2].low-c[i].high>mg)z.push({t:-1,lo:c[i].high,hi:c[i-2].low,i:i})}
@@ -112,18 +117,18 @@ function lbLevels(spec,data,now,a){var rb=lbWin(data[spec.range],spec,now),sb=lb
  return{w:spec.w,hi:hi,lo:lo,net:net,n:rb.length,swings:swings(sb,2),fvgs:fv,sb:sb,src:{range:spec.range,swing:spec.swing,fvg:spec.fvg.slice()},n5:spec.n5}}
 function touchCount(p,bars,tol){var n=0;(bars||[]).forEach(function(x){if(Math.abs(x.high-p)<=tol||Math.abs(x.low-p)<=tol)n++});return n}
 function planCount(st,a,n5){if(!st||!(st.hi>st.lo)||!(a>0))return 3;var rg=st.hi-st.lo,r=rg/a/Math.sqrt(n5),tr=st.net/rg;if(r>=1.7)return 5;if(tr>=0.6&&r>=1.0)return 5;if(r<1.0||tr<0.25)return 3;return 4}
-function rankSelect(cs,o){var a=o.a,sp=(o.sp||0.5)*a,d=o.d,m=o.m,side=cs.filter(function(c){return d*(m-c.p)>0}),taken=(o.taken||[]).slice(),out=[];
+function rankSelect(cs,o){var a=o.a,sp=(o.sp||0.5)*a,d=o.d,m=o.m,side=cs.filter(function(c){return d*(m-c.p)>0&&(o.maxDist==null||d*(m-c.p)<=o.maxDist+1e-9)}),taken=(o.taken||[]).slice(),out=[];
  var sc=side.map(function(c){var ks={},nm=[c.n];side.forEach(function(x){if(Math.abs(x.p-c.p)<=sp+1e-9&&!ks[x.k]){ks[x.k]=1;if(x!==c&&x.k!==c.k)nm.push(x.n)}});ks[c.k]=1;var kinds=Object.keys(ks),st=kinds.length+0.5*Math.min(c.touches||0,3),dist=d*(m-c.p)/a,r={};for(var q in c)r[q]=c[q];r.kinds=kinds;r.strength=st;r.score=st-0.03*dist;r.dist=dist;r.zn=nm.join(' + ');return r});
  sc.sort(function(u,w){return w.score-u.score||u.dist-w.dist});
  for(var i=0;i<sc.length&&out.length<o.N;i++){var c=sc[i],bad=false;for(var j=0;j<taken.length;j++)if(Math.abs(taken[j]-c.p)<sp-1e-9)bad=true;if(bad)continue;if(o.ok&&!o.ok(c))continue;out.push(c);taken.push(c.p)}return out}
 function paperOpen(p,lot,now){lot=+lot>0?+lot:0.01;p.pt={lot:lot,rem:lot,ot:now,t1:false};return p.pt}
 function paperClose(p,ev,o){var pt=p.pt;if(!pt||!(pt.rem>1e-9))return[];var q;if(ev=='TP1 hit'){if(pt.t1)return[];pt.t1=true;q=+(pt.lot/2).toFixed(4);pt.rem=+(pt.rem-q).toFixed(4)}else{q=pt.rem;pt.rem=0}
- var c={};for(var k in p)c[k]=p[k];c.lot=q;c.fl=pt.ot;var r=planResultRow(c,ev,o);r.paper=true;return[r]}
-function paperExpire(p,m,o){var pt=p.pt;if(!pt||!(pt.rem>1e-9))return[];var q=pt.rem;pt.rem=0;var r=closedRow({sym:o.sym,d:p.d,lot:q,ent:p.ent,ext:m,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:pt.ot,t:o.t,res:'Expired',r:rnd(p.d*(m-p.ent)/p.rk,2)});r.paper=true;return[r]}
-function balKey(u){return 'gdPB2_'+String(u||'').toLowerCase()}
-function balGet(st,u,def){try{var o=JSON.parse(st.getItem(balKey(u))||'null');if(o&&typeof o.bal=='number')return o}catch(e){}return{bal:+def||0,start:+def||0}}
-function balAdd(st,u,pl,def){var o=balGet(st,u,def);if(pl==null||isNaN(pl))return o;o.bal=+(o.bal+pl).toFixed(2);try{st.setItem(balKey(u),JSON.stringify(o))}catch(e){}return o}
-function balReset(st,u,start){var v=+(+start||0).toFixed(2),o={bal:v,start:v};try{st.setItem(balKey(u),JSON.stringify(o))}catch(e){}return o}
+ var c={};for(var k in p)c[k]=p[k];c.lot=q;c.fl=pt.ot;var r=planResultRow(c,ev,o);r.paper=true;r.src='auto';return[r]}
+function paperExpire(p,m,o){var pt=p.pt;if(!pt||!(pt.rem>1e-9))return[];var q=pt.rem;pt.rem=0;var r=closedRow({sym:o.sym,d:p.d,lot:q,ent:p.ent,ext:m,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:pt.ot,t:o.t,res:'Expired',r:rnd(p.d*(m-p.ent)/p.rk,2)});r.paper=true;r.src='auto';return[r]}
+function balKey(u,kind){return (kind=='m'?'gdPM_':'gdPA_')+String(u||'').toLowerCase()}
+function balGet(st,u,def,kind){try{var o=JSON.parse(st.getItem(balKey(u,kind))||'null');if(o&&typeof o.bal=='number'){o.w=o.w||0;o.l=o.l||0;return o}}catch(e){}return{bal:+def||0,start:+def||0,w:0,l:0}}
+function balAdd(st,u,pl,def,kind){var o=balGet(st,u,def,kind);if(pl==null||isNaN(pl))return o;o.bal=+(o.bal+pl).toFixed(2);if(pl>0)o.w++;else if(pl<0)o.l++;try{st.setItem(balKey(u,kind),JSON.stringify(o))}catch(e){}return o}
+function balReset(st,u,start,kind){var v=+(+start||0).toFixed(2),o={bal:v,start:v,w:0,l:0};try{st.setItem(balKey(u,kind),JSON.stringify(o))}catch(e){}return o}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -222,7 +227,7 @@ var PLA=ld('gdPL2'),TR={},PLCD=180000,PLT=['Waiting','Near entry','Filled','TP1 
 function ema(c,n){var k=2/(n+1),e=c[0];for(var i=1;i<c.length;i++)e=c[i]*k+e*(1-k);return e}
 function trend(c){if(c.length<55)return null;var l=c[c.length-1],a=ema(c,20),b=ema(c,50);return{d:(l>a&&a>b)?1:(l<a&&a<b)?-1:0,a:a,b:b}}
 async function tfs(sy){if(TR.s==sy&&Date.now()-TR.t<300000)return;var o={s:sy,t:Date.now()},iv=['1h','4h'];
- for(var i=0;i<2;i++){var b=(await j(API()+'/ohlc?interval='+iv[i]+'&limit=200')).bars.slice().reverse();if(sy!=SYM)return;o[iv[i]]=trend(b.map(function(x){return x.close}));o['n'+iv[i]]=b.length}TR=o}
+ for(var i=0;i<2;i++){var b=(await j(API()+'/ohlc?interval='+iv[i]+'&limit=200')).bars.slice().reverse();if(sy!=SYM)return;o[iv[i]]=trend(b.map(function(x){return x.close}));if(iv[i]=='4h'){var q4=b.slice(-15),t4=[];for(var z=1;z<q4.length;z++){var pc=q4[z-1].close;t4.push(Math.max(q4[z].high-q4[z].low,Math.abs(q4[z].high-pc),Math.abs(q4[z].low-pc)))}o.a4=t4.length?t4.reduce(function(u,w){return u+w},0)/t4.length:null}o['n'+iv[i]]=b.length}TR=o}
 function usDst(t){var d=new Date(t),y=d.getUTCFullYear(),m=8+(7-new Date(Date.UTC(y,2,1)).getUTCDay())%7,n=1+(7-new Date(Date.UTC(y,10,1)).getUTCDay())%7;return t>=Date.UTC(y,2,m,7)&&t<Date.UTC(y,10,n,6)}
 function hhmm(t){var d=new Date(t+288e5);return ('0'+d.getUTCHours()).slice(-2)+':'+('0'+d.getUTCMinutes()).slice(-2)}
 function sess(){var c=CAT[SYM],now=Date.now();if(c=='c')return{ok:true,end:null,w:'24/7'};
@@ -244,16 +249,17 @@ function planFrom(c,Z,m,d,a){var ent=c.p,sl=c.f-d*0.25*a,risk=Math.abs(ent-sl);i
  L1=T.filter(function(v){return d*(v-ent)>=0.5*risk})[0],t1=(L1!=null&&d*(L1-ent)<1.5*risk)?L1:ent+d*1.5*risk,
  L2=T.filter(function(v){return d*(v-t1)>=0.25*risk})[0],cap=Math.max(3,C.plrr)*risk,t2=(L2!=null&&d*(L2-ent)<cap)?L2:ent+d*cap,rr=Math.abs(t2-ent)/risk;
  return{d:d,ent:ent,sl:sl,t1:t1,t2:t2,rr:rr,zn:c.zn||c.n,st:'Waiting',rk:risk}}
-function mkPlans(m,d,n,taken,lv){var a=atr||m*0.002,Z=zones(d,m,a,lv);if(!Z.z.length)return{plans:[],why:'no '+(d>0?'support':'resistance')+' zone found '+f(0.25*a)+'+ away'};
- var sel=rankSelect(Z.z,{m:m,d:d,a:a,N:n,sp:0.5,taken:taken,ok:function(c){return planFrom(c,Z,m,d,a).rr>=C.plrr-1e-9}});
+function mkPlans(m,d,n,taken,lv){var a=atr||m*0.002,Z=zones(d,m,a,lv),cap=planCap(TR.a4,atr,C.plh);if(!Z.z.length)return{plans:[],why:'no '+(d>0?'support':'resistance')+' zone found '+f(0.25*a)+'+ away'};
+ var sel=rankSelect(Z.z,{m:m,d:d,a:a,N:n,sp:0.5,taken:taken,maxDist:cap,ok:function(c){return planFrom(c,Z,m,d,a).rr>=C.plrr-1e-9}});
  var plans=sel.map(function(c){var p=planFrom(c,Z,m,d,a);p.str=zoneStrat(p.zn);p.why=planWhy(d,p.zn,p.ent,p.rr,f,{n:c.kinds.length,tc:c.touches||0});return p});
- return{plans:plans,why:plans.length?'':'no zone has R:R ≥ 1:'+C.plrr+' (or all are too close to open plans)'}}
+ return{plans:plans,why:plans.length?'':'no zone within '+f(cap)+' of price has R:R ≥ 1:'+C.plrr+' (or they are too close to open plans)'}}
 var LBD={};
 async function lbLoad(sy){var sp=lbSpec(C.lb);if(LBD.s==sy&&LBD.w==sp.w&&Date.now()-LBD.t<300000)return;var need={'24h':[['5m',300],['1h',48],['4h',12]],'7d':[['1h',200],['4h',60],['1d',10]],'30d':[['1d',40]]}[sp.w],o={s:sy,w:sp.w,t:Date.now(),spec:sp,data:{}};
  for(var i=0;i<need.length;i++){var b=(await j(API()+'/ohlc?interval='+need[i][0]+'&limit='+need[i][1])).bars.slice().reverse();if(sy!=SYM)return;o.data[need[i][0]]=b}LBD=o}
 function lbNow(a){return LBD.data&&LBD.s==SYM&&LBD.w==lbSpec(C.lb).w?lbLevels(LBD.spec,LBD.data,Date.now(),a):null}
 function PLs(){var v=PLA[SYM];if(!v)return PLA[SYM]=[];if(!Array.isArray(v))v=PLA[SYM]=[v];return v}
-function logClosed(r){pushH(r);try{balAdd(localStorage,USER,r.pl,PN.acct>0?PN.acct:80)}catch(e){}}
+function acct0(){return PN.acct>0?PN.acct:80}
+function logClosed(r){try{balAdd(localStorage,USER,r.pl,acct0(),srcOf(r)=='auto'?'a':'m')}catch(e){}pushH(r)}
 var AX=null;function beep(){try{AX=AX||new (window.AudioContext||window.webkitAudioContext)();var o=AX.createOscillator(),g=AX.createGain();o.connect(g);g.connect(AX.destination);o.frequency.value=880;g.gain.value=0.15;o.start();o.stop(AX.currentTime+0.25)}catch(e){}try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
 function pst(p,s,now){p.st=s;if(s=='Expired'||s=='Cancelled'||s=='SL hit'||s=='TP2 hit')p.cl=now}
 function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
@@ -279,9 +285,9 @@ function svP(){try{localStorage.gdPL2=JSON.stringify(PLA)}catch(e){}}
 function tg(t){return t?(t.d>0?'<span class="up">▲ up</span>':t.d<0?'<span class="dn">▼ down</span>':'<span class="mu">▬ flat</span>'):'…'}
 function ckh(l){return l.map(function(x){return '<span class="ck '+(x[1]===null?'mu':x[1]?'up':'dn')+'">'+(x[1]===null?'–':x[1]?'✓':'✗')+' '+x[0]+'</span>'}).join('')}
 function rplan(m,L,cks,msg,h1,h4,N,lv){var c=$('plc'),a=atr||m*0.002,now=Date.now(),vis=L.filter(function(p){return !p.cl||now-p.cl<=PLCD}),act=L.filter(function(p){return !p.cl}).length,
- h='<div class="mu">Trade plans · '+SYM+' · 1H '+tg(h1)+' · 4H '+tg(h4)+' · lookback '+C.lb+(N?' · up to '+N+' plans':'')+'</div>';
- var pb=USER?balGet(localStorage,USER,PN.acct>0?PN.acct:80):null;
- h+='<div class="pap"><b>PAPER / demo</b> · '+(C.pap?'auto-trade ON':'auto-trade OFF')+(pb?' · balance <b class="'+(pb.bal>=pb.start?'up':'dn')+'">$'+pb.bal.toFixed(2)+'</b> <span class="mu">(start $'+pb.start.toFixed(2)+')</span>':'')+' <button id="pbr" class="sm">Reset</button></div>';
+ h='<div class="mu">Trade plans · '+SYM+' · 1H '+tg(h1)+' · 4H '+tg(h4)+' · lookback '+C.lb+(N?' · up to '+N+' plans':'')+(isFinite(planCap(TR.a4,atr,C.plh))?' · within '+f(planCap(TR.a4,atr,C.plh))+' of price (3× 4H ATR)':'')+'</div>';
+ var pb=USER?balGet(localStorage,USER,acct0(),'a'):null;
+ h+='<div class="pap"><b>PAPER / demo</b> · '+(C.pap?'auto-trade ON':'auto-trade OFF')+(pb?' · Auto balance <b class="'+(pb.bal>=pb.start?'up':'dn')+'">$'+pb.bal.toFixed(2)+'</b> <span class="mu">(P/L '+usd(pb.bal-pb.start)+' · win '+(pb.w+pb.l?Math.round(pb.w/(pb.w+pb.l)*100)+'%':'—')+')</span>':'')+' <button id="pbr" class="sm">Reset</button></div>';
  if(vis.length){vis.sort(function(u,w){return u.d*(w.ent-u.ent)});
   vis.forEach(function(p){var d=p.d,sc=p.cl?(p.st=='TP2 hit'?'up':p.st=='SL hit'?'dn':'mu'):p.st=='Waiting'?'WAITc':p.st=='Near entry'?'WAITc bl':'up',left=p.ex-now,
    pt=p.pt?'<div class="mu">PAPER trade · '+(+p.pt.lot.toFixed(3))+' lot'+(p.pt.rem>0?' open'+(p.pt.t1?' (half closed at TP1)':''):' closed')+'</div>':'';
@@ -335,9 +341,12 @@ $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS
 var USER=null,booted=false,SIG=null;
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
 function usd(v){return (v>=0?'+$':'-$')+Math.abs(v).toFixed(2)}
-function rhist(){var a=USER?histGet(localStorage,USER):[],S=plSummary(a),pb=USER?balGet(localStorage,USER,PN.acct>0?PN.acct:80):null,h=pb?'<div class="mu">PAPER / demo balance <b class="'+(pb.bal>=pb.start?'up':'dn')+'">$'+pb.bal.toFixed(2)+'</b> (start $'+pb.start.toFixed(2)+')</div>':'';
- $('hsm').innerHTML='📜 Past P/L · <span class="'+(S.total>0?'up':S.total<0?'dn':'mu')+'">'+(S.n?usd(S.total):'$0.00')+'</span> <span class="mu">('+a.length+'/'+HCAP+')</span>';
- if(S.n)h+='<div class="plg" style="margin:8px 0"><div><span class="mu">Total P/L</span><br><b class="'+(S.total>0?'up':S.total<0?'dn':'')+'">'+usd(S.total)+'</b></div><div><span class="mu">Wins</span><br><b class="up">'+S.wins+'</b></div><div><span class="mu">Losses</span><br><b class="dn">'+S.losses+'</b></div><div><span class="mu">Win rate</span><br><b>'+(S.rate==null?'—':Math.round(S.rate*100)+'%')+'</b></div></div>'+(S.noUsd?'<div class="mu">Total $ counts XAUUSD trades only; '+S.noUsd+' other-symbol trade(s) show points.</div>':'');
+var HF=localStorage.gdHF2||'all';
+function bxh(k,nm){var b=balGet(localStorage,USER,acct0(),k),n=b.w+b.l;return '<div class="bx"><div class="mu">'+nm+'</div><b class="'+(b.bal>=b.start?'up':'dn')+'">$'+b.bal.toFixed(2)+'</b><div class="mu">P/L <span class="'+(b.bal-b.start>0?'up':b.bal-b.start<0?'dn':'')+'">'+usd(+(b.bal-b.start).toFixed(2))+'</span> · win '+(n?Math.round(b.w/n*100)+'%':'—')+' ('+b.w+'W/'+b.l+'L)</div><button class="sm" data-rs="'+k+'">Reset</button></div>'}
+function rhist(){var all=USER?histGet(localStorage,USER):[],S0=plSummary(all),a=all.filter(function(r){return HF=='all'||(r.k=='closed'&&srcOf(r)==(HF=='auto'?'auto':'manual'))}),S=plSummary(a),h='';
+ $('hsm').innerHTML='📜 Past P/L · <span class="'+(S0.total>0?'up':S0.total<0?'dn':'mu')+'">'+(S0.n?usd(S0.total):'$0.00')+'</span> <span class="mu">('+all.length+'/'+HCAP+')</span>';
+ if(USER)h+='<div class="mu">PAPER / demo. Each starts at your planner account ($'+acct0()+').</div><div class="bxs">'+bxh('a','Auto plans')+bxh('m','Manual trades')+'</div>'+'<div class="hf">'+[['all','All'],['auto','Auto'],['manual','Manual']].map(function(x){return '<button class="sm'+(HF==x[0]?' on':'')+'" data-hf="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>';
+ if(S.n)h+='<div class="plg" style="margin:8px 0"><div><span class="mu">Total P/L</span><br><b class="'+(S.total>0?'up':S.total<0?'dn':'')+'">'+usd(S.total)+'</b></div><div><span class="mu">Wins</span><br><b class="up">'+S.wins+'</b></div><div><span class="mu">Losses</span><br><b class="dn">'+S.losses+'</b></div><div><span class="mu">Win rate</span><br><b>'+(S.rate==null?'—':Math.round(S.rate*100)+'%')+'</b></div></div><div class="mu">Over the '+S.n+' stored '+(HF=='all'?'':HF+' ')+'trade'+(S.n>1?'s':'')+' (latest '+HCAP+' kept).</div>';
  h+=a.length?a.map(function(x){var dp=DP[x.sym]!=null?DP[x.sym]:2,fx=function(v){return v==null?'—':(+v).toFixed(dp)};
   if(x.k=='closed'){var v=x.pl!=null?x.pl:x.pts,c=v>0?'up':v<0?'dn':'mu';
    return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' · '+x.lot+' lot'+(x.paper?' · <b class="pp">PAPER</b>':'')+(x.res!='Closed'?' · <b>'+x.res+'</b>'+(x.r!=null?' ('+(x.r>0?'+':'')+x.r+'R)':''):'')+'<div class="mu">'+fx(x.ent)+' → '+fx(x.ext)+' · '+(x.pts>0?'+':'')+fx(x.pts)+' pts</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">'+ptFmt(x.ot)+' → '+ptFmt(x.t)+' PHT</div></div><div class="en '+c+'">'+(x.pl!=null?usd(x.pl):(x.pts>0?'+':'')+fx(x.pts)+'<div class="mu">pts</div>')+'</div></div>'}
@@ -350,23 +359,25 @@ function closeEntries(idx,all){var L=E(),sel_=all?L.slice():idx.map(function(i){
  logRows(groupClose(sel_,{sym:SYM,ext:prev,xau:isXau(),dp:DP[SYM],t:Date.now()}).map(function(r){return r}))}
 function logPlan(p){try{pushH(planResultRow(p,p.st,{sym:SYM,xau:isXau(),dp:DP[SYM],t:Date.now()}))}catch(e){}}
 // planner
-var PN={k:'sl',off:10,lot:0.01,slD:15,tpD:30,tpEd:false,acct:80};try{var _p=JSON.parse(localStorage.gdPN2||'null');if(_p&&otOf(_p.k))for(var _k in PN)if(_p[_k]!==undefined)PN[_k]=_p[_k]}catch(e){}
+var PN={k:'sl',off:10,offMag:10,lot:0.01,slD:15,tpD:30,tpEd:false,acct:80,sym:null,cust:false};try{var _p=JSON.parse(localStorage.gdPN2||'null');if(_p&&otOf(_p.k)){for(var _k in PN)if(_p[_k]!==undefined)PN[_k]=_p[_k];if(_p.sym===undefined){PN.sym='XAUUSD';PN.cust=!(PN.slD==15&&PN.tpD==30&&Math.abs(PN.off)==10)}}}catch(e){}
 function pnSv(){try{localStorage.gdPN2=JSON.stringify(PN)}catch(e){}}
 function pnBuild(){var o=OT.map(function(t){return '<option value="'+t[0]+'"'+(PN.k==t[0]?' selected':'')+'>'+t[1]+'</option>'}).join('');
  function row(l,id,v,st){return '<div class="fr"><span>'+l+'</span><input id="'+id+'" type="number" inputmode="decimal" step="'+st+'" value="'+v+'"></div>'}
  $('tpb').innerHTML='<div class="fr"><span>Order type</span><select id="pnT">'+o+'</select></div>'+row('Entry offset $ (+ above / − below price)','pnO',PN.off,'any')+row('Lot','pnL',PN.lot,'0.01')+row('SL distance $','pnS',PN.slD,'any')+row('TP distance $ (2× SL until you edit)','pnP',PN.tpD,'any')+row('Account $','pnA',PN.acct,'any')+'<div id="pnR"></div>';pnSync()}
 function pnSync(){var m=otOf(PN.k)[0].charAt(0)=='m';$('pnO').disabled=m;$('pnO').value=m?0:PN.off}
 function pnVal(id){var v=parseFloat($(id).value);return isNaN(v)?NaN:v}
-function pnCur(){var q=lastQ||{};return{k:PN.k,price:prev,off:PN.off,lot:PN.lot,slD:PN.slD,tpD:PN.tpD,acct:PN.acct,dp:DP[SYM],xau:SYM=='XAUUSD'}}
+function pnCur(){return{k:PN.k,price:prev,off:PN.off,lot:PN.lot,slD:PN.slD,tpD:PN.tpD,acct:PN.acct,dp:DP[SYM],sym:SYM}}
 function cpb(v){return '<button class="cp" data-c="'+v+'">Copy</button>'}
-function pnOut(){if(!$('pnR'))return;var r=pnCalc(pnCur()),dp=DP[SYM],h='';
+function pnDef(){if(!(prev>0)||PN.sym===SYM)return;PN.sym=SYM;if(PN.cust)return;var g=pnDefaultsFor(SYM,prev);PN.offMag=g.off;PN.slD=g.slD;PN.tpD=+(g.slD*2).toPrecision(4);var sg=otOf(PN.k)[3];PN.off=sg==0?0:(sg>0?1:-1)*g.off;pnSv();if($('pnS')){$('pnS').value=PN.slD;$('pnP').value=PN.tpD;$('pnO').value=PN.k.charAt(0)=='m'?0:PN.off}}
+function pnOut(){if(!$('pnR'))return;pnDef();var r=pnCalc(pnCur()),dp=DP[SYM],h='';
  if(r.ok){var cl=r.d>0?'up':'dn';
   h+='<div class="plh" style="margin-top:10px"><b class="'+cl+'">'+r.name.toUpperCase()+'</b><span class="mu">'+SYM+' live '+f(prev)+'</span></div>'+
   '<div class="pnr"><span>'+(r.mkt?'Entry (market)':'Entry')+'</span><b>'+r.ent.toFixed(dp)+'</b>'+cpb(r.ent.toFixed(dp))+'</div>'+
   '<div class="pnr"><span>S/L</span><b class="dn">'+r.sl.toFixed(dp)+'</b>'+cpb(r.sl.toFixed(dp))+'</div>'+
   '<div class="pnr"><span>T/P</span><b class="up">'+r.tp.toFixed(dp)+'</b>'+cpb(r.tp.toFixed(dp))+'</div>';
-  if(r.xau)h+='<div class="plg"><div><span class="mu">Risk</span><br><b class="dn">'+(r.risk==null?'—':'$'+r.risk.toFixed(2))+'</b></div><div><span class="mu">Reward</span><br><b class="up">'+(r.rew==null?'—':'$'+r.rew.toFixed(2))+'</b></div><div><span class="mu">R:R</span><br><b>'+(r.rr==null?'—':'1:'+r.rr.toFixed(1))+'</b></div><div><span class="mu">% of acct</span><br><b>'+(r.pct==null?'—':r.pct.toFixed(0)+'%')+'</b></div></div>';
-  else h+='<div class="mu" style="margin-top:6px">$ risk/reward is only calculated for XAUUSD (0.01 lot = $1 per $1). Distances here are in price units.</div>';
+  if(r.risk!=null)h+='<div class="plg"><div><span class="mu">Risk</span><br><b class="dn">'+(r.risk==null?'—':'$'+r.risk.toFixed(2))+'</b></div><div><span class="mu">Reward</span><br><b class="up">'+(r.rew==null?'—':'$'+r.rew.toFixed(2))+'</b></div><div><span class="mu">R:R</span><br><b>'+(r.rr==null?'—':'1:'+r.rr.toFixed(1))+'</b></div><div><span class="mu">% of acct</span><br><b>'+(r.pct==null?'—':r.pct.toFixed(0)+'%')+'</b></div></div>';
+  else h+='<div class="mu" style="margin-top:6px">No $ spec for this symbol.</div>';
+  var cs=CS[SYM];if(cs)h+='<div class="mu" style="margin-top:6px">'+SYM+': 1 lot = '+cs.size.toLocaleString()+' '+cs.u+(cs.q!='USD'?' · quote '+cs.q+' converted to USD at the live rate':'')+' · distances are in price units.</div>';
   if(r.mkt)h+='<div class="mu">Market order fills at the live price when you tap, so the real fill can differ a little.</div>'}
  h+=r.warn.map(function(x){return '<div class="wr">⚠ '+x+'</div>'}).join('');
  if(r.ok)h+='<button id="pnSave" class="sm" style="margin-top:8px">Save to history</button>';
@@ -379,12 +390,12 @@ $('tpb').addEventListener('input',function(e){var id=e.target.id,v=pnVal(id);
  if(id=='pnO')PN.off=v;else if(id=='pnL')PN.lot=v;else if(id=='pnA')PN.acct=v;
  else if(id=='pnS'){PN.slD=v;if(!PN.tpEd&&!isNaN(v)){PN.tpD=+(v*2).toFixed(4);$('pnP').value=PN.tpD}}
  else if(id=='pnP'){PN.tpD=v;PN.tpEd=true}
- pnSv();pnOut()});
-$('tpb').addEventListener('change',function(e){if(e.target.id=='pnT'){PN.k=e.target.value;PN.off=otOf(PN.k)[3];pnSv();pnSync();pnOut()}});
+ if(id=='pnO'||id=='pnS'||id=='pnP')PN.cust=true;pnSv();pnOut()});
+$('tpb').addEventListener('change',function(e){if(e.target.id=='pnT'){PN.k=e.target.value;var sg=otOf(PN.k)[3];PN.off=sg==0?0:(sg>0?1:-1)*(PN.offMag||10);pnSv();pnSync();pnOut()}});
 $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp')cpy(t.dataset.c,t);
  else if(t.id=='pnSave'&&PNR&&PNR.ok){var r=PNR;pushH({k:'calc',ty:r.name.toUpperCase(),d:r.d,ent:r.ent,sl:r.sl,tp:r.tp,lot:PN.lot,risk:r.risk,str:'Manual planner',why:'Saved from the trade planner'+(r.xau?'':' (price levels only)')});t.textContent='Saved ✓';setTimeout(function(){t.textContent='Save to history'},1200)}});
-$('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset PAPER balance to your planner account ($'+(PN.acct>0?PN.acct:80)+')?')){balReset(localStorage,USER,PN.acct>0?PN.acct:80);rhist();tick()}});
-$('hsb').addEventListener('click',function(e){if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
+$('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset the AUTO paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),'a');rhist();tick()}});
+$('hsb').addEventListener('click',function(e){var d=e.target.dataset||{};if(d.hf){HF=d.hf;try{localStorage.gdHF2=HF}catch(x){}rhist();return}if(d.rs&&USER){if(confirm('Reset the '+(d.rs=='a'?'AUTO':'MANUAL')+' paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),d.rs);rhist();tick()}return}if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
 function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
