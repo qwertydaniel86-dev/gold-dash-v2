@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -35,6 +35,32 @@ t('zone → strategy',function(){assert.strictEqual(L.zoneStrat('S1 pivot'),'Piv
 t('signal strategy label + reason',function(){var up={'1h':{d:1},'4h':{d:1}},a=L.sigInfo('BUY',0.031,0.02,up);assert.strictEqual(a.name,'Momentum (10-min move)');assert(/\+0\.031% in 10 min/.test(a.why)&&/with 1H\/4H trend/.test(a.why));
  assert(/against 1H\/4H trend/.test(L.sigInfo('SELL',-0.03,0.02,up).why));assert(!/trend/.test(L.sigInfo('BUY',0.03,0.02,{'1h':{d:1},'4h':{d:-1}}).why));var w=L.sigInfo('WAIT',0.005,0.02,up);assert.strictEqual(w.name,'No signal');assert(/under the ±0\.02%/.test(w.why))});
 t('plan reason is one line, mentions trend + zone',function(){var w=L.planWhy(1,'S1 pivot',4800,2.1,function(x){return x.toFixed(2)});assert(!/\n/.test(w));assert(/Trend up on 1H\+4H/.test(w)&&/S1 pivot 4800\.00/.test(w)&&/R:R 1:2\.1/.test(w))});
+// ---- past P/L log ----
+function rowE(o){var b={sym:'XAUUSD',d:1,lot:0.01,ent:3500,ext:3510,xau:true,dp:2,str:'Manual',ot:Date.UTC(2026,10,20,1,0),t:Date.UTC(2026,10,20,3,30)};for(var k in o)b[k]=o[k];return L.closedRow(b)}
+t('P/L BUY win: 10 pts x 0.01 lot = $10',function(){var r=rowE({});assert.strictEqual(r.k,'closed');assert.strictEqual(r.ty,'BUY');assert.strictEqual(r.pts,10);assert.strictEqual(r.pl,10)});
+t('P/L BUY loss',function(){var r=rowE({ext:3485.5});assert.strictEqual(r.pts,-14.5);assert.strictEqual(r.pl,-14.5)});
+t('P/L SELL win (price down)',function(){var r=rowE({d:-1,ext:3490});assert.strictEqual(r.ty,'SELL');assert.strictEqual(r.pts,10);assert.strictEqual(r.pl,10)});
+t('P/L SELL loss (price up)',function(){var r=rowE({d:-1,ext:3520.25});assert.strictEqual(r.pts,-20.25);assert.strictEqual(r.pl,-20.25)});
+t('P/L scales with lot (0.05 -> x5) and rounds to cents',function(){assert.strictEqual(rowE({lot:0.05}).pl,50);assert.strictEqual(rowE({lot:0.03,ext:3500.33}).pl,0.99)});
+t('P/L breakeven = 0',function(){var r=rowE({ext:3500});assert.strictEqual(r.pts,0);assert.strictEqual(r.pl,0)});
+t('non-XAU: points only, no $',function(){var r=rowE({sym:'EURUSD',xau:false,dp:5,ent:1.08,ext:1.0825});assert.strictEqual(r.pts,0.0025);assert.strictEqual(r.pl,null)});
+t('row stores strategy, lot, times',function(){var r=rowE({str:'Pivot bounce'});assert.strictEqual(r.str,'Pivot bounce');assert.strictEqual(r.lot,0.01);assert.strictEqual(r.ot,Date.UTC(2026,10,20,1,0));assert.strictEqual(r.t,Date.UTC(2026,10,20,3,30))});
+t('ptFmt shows PHT (UTC+8)',function(){assert.strictEqual(L.ptFmt(Date.UTC(2026,10,20,1,0)),'11-20 09:00');assert.strictEqual(L.ptFmt(Date.UTC(2026,10,20,17,5)),'11-21 01:05');assert.strictEqual(L.ptFmt(null),'—')});
+t('groupClose: avg entry per side, summed lot',function(){var es=[{d:1,p:3500,lot:0.01,str:'A',ot:1000},{d:1,p:3510,lot:0.01,str:'A',ot:500},{d:-1,p:3520,lot:0.02,str:'B',ot:900}];
+ var rs=L.groupClose(es,{sym:'XAUUSD',ext:3515,xau:true,dp:2,t:5000});assert.strictEqual(rs.length,2);var b=rs.filter(function(r){return r.d>0})[0],s=rs.filter(function(r){return r.d<0})[0];
+ assert.strictEqual(b.ent,3505);assert.strictEqual(b.lot,0.02);assert.strictEqual(b.pts,10);assert.strictEqual(b.pl,20);assert.strictEqual(b.ot,500);assert.strictEqual(b.str,'A');
+ assert.strictEqual(s.ent,3520);assert.strictEqual(s.lot,0.02);assert.strictEqual(s.pts,5);assert.strictEqual(s.pl,10)});
+t('groupClose: mixed strategies -> Mixed; missing lot -> 0.01; missing ot ok',function(){var rs=L.groupClose([{d:1,p:100,str:'A'},{d:1,p:102,str:'B'}],{sym:'XAUUSD',ext:101,xau:true,dp:2,t:1});assert.strictEqual(rs.length,1);assert.strictEqual(rs[0].str,'Mixed');assert.strictEqual(rs[0].lot,0.02);assert.strictEqual(rs[0].ot,null);assert.strictEqual(rs[0].ent,101);assert.strictEqual(rs[0].pl,0)});
+t('plan result rows: TP1/TP2/SL with R, BUY and SELL',function(){var P={d:1,ent:3500,sl:3490,t1:3515,t2:3530,rk:10,str:'FVG retest',why:'w',fl:1000,lot:0.01};
+ var a=L.planResultRow(P,'TP1 hit',{sym:'XAUUSD',xau:true,dp:2,t:2000}),b=L.planResultRow(P,'TP2 hit',{sym:'XAUUSD',xau:true,dp:2,t:2000}),c2=L.planResultRow(P,'SL hit',{sym:'XAUUSD',xau:true,dp:2,t:2000});
+ assert.strictEqual(a.ext,3515);assert.strictEqual(a.pl,15);assert.strictEqual(a.r,1.5);assert.strictEqual(a.res,'TP1');assert.strictEqual(b.pl,30);assert.strictEqual(b.r,3);assert.strictEqual(c2.ext,3490);assert.strictEqual(c2.pl,-10);assert.strictEqual(c2.r,-1);assert.strictEqual(c2.res,'SL');assert.strictEqual(c2.ot,1000);assert.strictEqual(c2.str,'FVG retest');
+ var S={d:-1,ent:3500,sl:3510,t1:3485,t2:3470,rk:10,str:'Pivot bounce',lot:0.02},s1=L.planResultRow(S,'TP2 hit',{sym:'XAUUSD',xau:true,dp:2,t:1}),s2=L.planResultRow(S,'SL hit',{sym:'XAUUSD',xau:true,dp:2,t:1});assert.strictEqual(s1.pl,60);assert.strictEqual(s1.r,3);assert.strictEqual(s2.pl,-20);assert.strictEqual(s2.r,-1);assert.strictEqual(s2.ty,'SELL')});
+t('summary: total, wins, losses, win rate; planner rows excluded',function(){var rows=[rowE({}),rowE({ext:3485.5}),rowE({d:-1,ext:3490}),rowE({ext:3500}),{k:'calc',ty:'BUY LIMIT'},{k:'plan',ty:'BUY LIMIT'}],s=L.plSummary(rows);
+ assert.strictEqual(s.n,4);assert.strictEqual(s.total,5.5);assert.strictEqual(s.wins,2);assert.strictEqual(s.losses,1);assert.strictEqual(s.flat,1);assert.strictEqual(s.rate,2/3)});
+t('summary: empty, and non-XAU rows count by points but not in $ total',function(){var e=L.plSummary([]);assert.strictEqual(e.n,0);assert.strictEqual(e.total,0);assert.strictEqual(e.rate,null);
+ var s=L.plSummary([rowE({}),rowE({sym:'EURUSD',xau:false,dp:5,ent:1.08,ext:1.07})]);assert.strictEqual(s.total,10);assert.strictEqual(s.wins,1);assert.strictEqual(s.losses,1);assert.strictEqual(s.noUsd,1)});
+t('P/L log obeys the 30 cap, newest first, summary only over stored rows',function(){var st=mem();for(var i=1;i<=35;i++)L.histAdd(st,'dan',rowE({ext:3500+i,t:i}));var a=L.histGet(st,'dan');assert.strictEqual(a.length,30);assert.strictEqual(a[0].pts,35);assert.strictEqual(a[29].pts,6);
+ var s=L.plSummary(a);assert.strictEqual(s.n,30);assert.strictEqual(s.wins,30);var tot=0;for(var j=6;j<=35;j++)tot+=j;assert.strictEqual(s.total,+tot.toFixed(2))});
 var PW=process.env.GD_PW;
 async function authTests(){
  if(!PW){console.log('SKIP auth tests (set GD_PW to run)');return}

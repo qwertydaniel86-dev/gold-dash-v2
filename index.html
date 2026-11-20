@@ -51,7 +51,7 @@ details.card{display:block}details.card>summary{font-weight:700;font-size:15px;c
 <div class="card" id="plc" style="margin-top:12px;display:none"></div>
 <details class="card" id="tpn" style="margin-top:12px"><summary>🧮 Trade planner (MT5)</summary><div id="tpb"></div></details>
 <details class="card" id="tps" style="margin-top:12px"><summary>💡 Beginner tips</summary><ul class="tips"><li>Always set a stop loss (S/L). No S/L, no trade.</li><li>Use 0.01 lot on a small account.</li><li>Take profit (T/P) about 2× your stop distance.</li><li>Don’t use a stop tighter than $10. Gold moves too much.</li><li>After the trade is +$10, move your S/L to break-even (your entry price).</li><li>Avoid 8:30–10:30 PM PH time and news times.</li><li>Delete unfilled pending orders before news.</li><li>Close your trades before the weekend.</li><li>A limit order only fills if price reaches it. No touch, no trade.</li></ul></details>
-<details class="card" id="hst" style="margin-top:12px"><summary id="hsm">📜 History</summary><div id="hsb"></div></details>
+<details class="card" id="hst" style="margin-top:12px"><summary id="hsm">📜 Past P/L</summary><div id="hsb"></div></details>
 <div class="row"><div class="card"><div class="mu">Signal move</div><div id="m10">—</div></div>
 <div class="card"><div class="mu" id="atl">Stop distance</div><div id="atr">—</div></div></div>
 <div class="row"><div class="card"><div class="mu">Day high / low</div><div id="hl">—</div></div></div>
@@ -95,6 +95,13 @@ function hexOf(b){return Array.from(new Uint8Array(b)).map(function(x){return ('
 async function pbkHex(pw,saltHex,it){var sb=new Uint8Array(saltHex.match(/../g).map(function(x){return parseInt(x,16)})),k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return hexOf(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:sb,iterations:it},k,256))}
 async function authCheck(u,p){if(String(u||'').trim().toLowerCase()!==GD_AUTH.u)return null;var h=await pbkHex(String(p||''),GD_AUTH.salt,GD_AUTH.it);return h===GD_AUTH.h?h:null}
 function authSessOk(s){return !!(s&&s.u===GD_AUTH.u&&s.k===GD_AUTH.h)}
+function ptFmt(t){if(!t)return '—';var d=new Date(t+288e5),z=function(n){return ('0'+n).slice(-2)};return z(d.getUTCMonth()+1)+'-'+z(d.getUTCDate())+' '+z(d.getUTCHours())+':'+z(d.getUTCMinutes())}
+function closedRow(o){var d=o.d,pts=rnd(d*(o.ext-o.ent),o.dp),lot=+o.lot>0?+o.lot:0.01;return{k:'closed',sym:o.sym,d:d,ty:d>0?'BUY':'SELL',lot:rnd(lot,2),ent:o.ent,ext:o.ext,pts:pts,pl:o.xau?rnd(pts*lot*100,2):null,str:o.str||'Manual',why:o.why||'',ot:o.ot||null,t:o.t,res:o.res||'Closed',r:o.r==null?null:o.r}}
+function groupClose(es,o){var out=[];[1,-1].forEach(function(d){var g=es.filter(function(e){return e.d==d});if(!g.length)return;var sp=0,lot=0,ot=null,strs={};g.forEach(function(e){sp+=e.p;lot+=(+e.lot>0?+e.lot:0.01);if(e.ot&&(ot==null||e.ot<ot))ot=e.ot;strs[e.str||'Manual']=1});var ks=Object.keys(strs);
+ out.push(closedRow({sym:o.sym,d:d,lot:lot,ent:rnd(sp/g.length,o.dp),ext:o.ext,xau:o.xau,dp:o.dp,str:ks.length>1?'Mixed':ks[0],why:ks.length>1?'':(g[0].why||''),ot:ot,t:o.t}))});return out}
+function planResultRow(p,st,o){var res=st=='TP1 hit'?'TP1':st=='TP2 hit'?'TP2':'SL',ext=res=='TP1'?p.t1:res=='TP2'?p.t2:p.sl,r=rnd(p.d*(ext-p.ent)/p.rk,2);
+ return closedRow({sym:o.sym,d:p.d,lot:p.lot,ent:p.ent,ext:ext,xau:o.xau,dp:o.dp,str:p.str||zoneStrat(p.zn),why:p.why||'',ot:p.fl||null,t:o.t,res:res,r:r})}
+function plSummary(rows){var s={n:0,total:0,wins:0,losses:0,flat:0,rate:null,noUsd:0};(rows||[]).forEach(function(r){if(!r||r.k!=='closed')return;s.n++;var v=r.pl!=null?r.pl:r.pts;if(r.pl!=null)s.total+=r.pl;else s.noUsd++;if(v>0)s.wins++;else if(v<0)s.losses++;else s.flat++});s.total=+s.total.toFixed(2);if(s.wins+s.losses>0)s.rate=s.wins/(s.wins+s.losses);return s}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -170,11 +177,11 @@ function lvls(x){var d=x.d,p=x.p,s=slD(p),a=atr||p*0.002,L=LV.map(function(l){re
  if(C.tr){var td=C.trm=='pct'?p*C.trv/100:C.trv*a;if(td>0){var ts=x.b-d*td;if(d*(ts-se)>0){se=ts;kd='tr'}}}
  return{t1:t1,t2:t2,sl:sl,se:se,kd:kd}}
 var NT=0;function note(x){var n=$('nt');n.textContent=x;clearTimeout(NT);NT=setTimeout(function(){n.textContent=''},2500)}
-function addE(d,p,tag,str,why){var l=E();if(l.length>=C.mx){note('Max entries: '+C.mx);return false}var x={d:d,p:p,b:p,str:str||'Manual',why:why||''};l.push(x);sv();sel();note((tag||(d>0?'BUY':'SELL'))+' #'+l.length+' '+SYM+' at '+f(p));pos();var v=lvls(x);pushH({k:'entry',ty:d>0?'BUY':'SELL',d:d,ent:p,sl:v.sl,tp:v.t1,tp2:v.t2,str:x.str,why:x.why});return true}
+function addE(d,p,tag,str,why){var l=E();if(l.length>=C.mx){note('Max entries: '+C.mx);return false}var x={d:d,p:p,b:p,str:str||'Manual',why:why||'',lot:curLot(),ot:Date.now()};l.push(x);sv();sel();note((tag||(d>0?'BUY':'SELL'))+' #'+l.length+' '+SYM+' at '+f(p));pos();return true}
 function add(d){if(prev==null)return;var g=SIG&&SIG.s==(d>0?'BUY':'SELL');addE(d,prev,null,g?SIG.name:'Manual',g?SIG.why:'No matching signal when you tapped')}
 function tap(el,fn){var t=0;el.addEventListener('touchend',function(e){e.preventDefault();t=Date.now();fn()},{passive:false});el.addEventListener('click',function(){if(Date.now()-t>600)fn()})}
-tap($('bB'),function(){add(1)});tap($('bS'),function(){add(-1)});tap($('bC'),function(){EA[SYM]=[];sv();sel();note('All closed');pos()});
-$('pos').addEventListener('click',function(e){var x=e.target.closest('[data-x]');if(x){E().splice(+x.dataset.x,1);sv();sel();pos()}});
+tap($('bB'),function(){add(1)});tap($('bS'),function(){add(-1)});tap($('bC'),function(){closeEntries(null,true);EA[SYM]=[];sv();sel();note('All closed');pos()});
+$('pos').addEventListener('click',function(e){var x=e.target.closest('[data-x]');if(x){closeEntries([+x.dataset.x]);E().splice(+x.dataset.x,1);sv();sel();pos()}});
 $('pend').addEventListener('click',function(e){var x=e.target.closest('[data-px]');if(x){P().splice(+x.dataset.px,1);sv();sel();pend(prev)}});
 var PN={BS:['BUY STOP',1,1],BL:['BUY LIMIT',1,-1],SS:['SELL STOP',-1,-1],SL:['SELL LIMIT',-1,1]};
 function pend(m){var b=$('pend'),l=P();if(m!=null&&!closed){for(var i=l.length-1;i>=0;i--){var o=l[i],n=PN[o.k],hit=n[2]>0?m>=o.lv:m<=o.lv;if(hit&&addE(n[1],o.lv,n[0]+' hit →'+(n[1]>0?' BUY':' SELL'),'Pending order (yours)',n[0]+' '+f(o.lv)+' was reached')){l.splice(i,1);sv();sel()}}}
@@ -221,14 +228,14 @@ function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
   else if(!closed){var d=p.d;
    if(!p.fl){if(d*(m-p.sl)<=0)pst(p,'Cancelled',now);else if(d*(m-p.ent)<=0){p.fl=now;pst(p,'Filled',now)}else pst(p,Math.abs(m-p.ent)<=0.25*a?'Near entry':'Waiting',now)}
    else{if(d*(m-p.sl)<=0)pst(p,'SL hit',now);else if(d*(m-p.t2)>=0)pst(p,'TP2 hit',now);else if(!p.t1h&&d*(m-p.t1)>=0){p.t1h=1;pst(p,'TP1 hit',now)}}}
-  if(p.st!=o){svP();if(!(o=='Near entry'&&p.st=='Waiting')){var al=SYM+' plan: '+p.st.toUpperCase()+(p.st=='SL hit'&&p.t1h?' (after TP1)':'');note(al);beep();$('plc').dataset.al=al}}}
+  if(p.st!=o){svP();if(p.st=='TP1 hit'||p.st=='TP2 hit'||p.st=='SL hit')logPlan(p);if(!(o=='Near entry'&&p.st=='Waiting')){var al=SYM+' plan: '+p.st.toUpperCase()+(p.st=='SL hit'&&p.t1h?' (after TP1)':'');note(al);beep();$('plc').dataset.al=al}}}
  var cks=null,msg='',h1=TR['1h'],h4=TR['4h'],se=sess();
  if(!p||(p.cl&&now-p.cl>PLCD)){
   var tr=h1&&h4&&h1.d==h4.d&&h1.d!=0;cks=[['Trend agrees',!h1||!h4?null:tr],['Market open',!closed],['Session good ('+se.w+' PHT)',se.ok],['R:R ≥ 1:'+C.plrr,null]];
   if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!tr)msg='No plan, timeframes disagree';else if(closed)msg='No plan, market closed';else if(!se.ok)msg='No plan, outside good session ('+se.w+' PHT)';
   else{var n=mkPlan(m,h1.d);if(n.why)msg='No plan, '+n.why;else{cks[3][1]=n.rr>=C.plrr-1e-9;
     if(!cks[3][1])msg='No plan, R:R 1:'+n.rr.toFixed(1)+' is below 1:'+C.plrr+' ('+(n.d>0?'Buy':'Sell')+' Limit '+f(n.ent)+' · '+n.zn+')';
-    else{n.ct=now;n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);delete PLA[SYM];PLA[SYM]=n;p=n;svP();planHist(n);note(SYM+' new '+(n.d>0?'BUY':'SELL')+' LIMIT plan @ '+f(n.ent))}}}
+    else{n.ct=now;n.lot=curLot();n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);delete PLA[SYM];PLA[SYM]=n;p=n;svP();note(SYM+' new '+(n.d>0?'BUY':'SELL')+' LIMIT plan @ '+f(n.ent))}}}
   if(!(p&&p.ct))p=null}
  rplan(m,p,cks,msg,h1,h4)}
 function svP(){try{localStorage.gdPL2=JSON.stringify(PLA)}catch(e){}}
@@ -282,10 +289,21 @@ $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS
 /* ---- history / signal / planner UI ---- */
 var USER=null,booted=false,SIG=null;
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
-function rhist(){var a=USER?histGet(localStorage,USER):[];$('hsm').textContent='📜 History ('+a.length+'/'+HCAP+')';
- $('hsb').innerHTML=(a.length?a.map(function(x){var d=new Date(x.t+288e5),dp=DP[x.sym]!=null?DP[x.sym]:2,fx=function(v){return v==null?'—':(+v).toFixed(dp)};
-  return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' @ '+fx(x.ent)+'<div class="mu">SL '+fx(x.sl)+' · TP '+fx(x.tp)+(x.tp2!=null?' · TP2 '+fx(x.tp2):'')+(x.lot?' · lot '+x.lot:'')+(x.risk!=null?' · risk $'+x.risk:'')+'</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div></div><div class="en mu">'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2)+'<br>'+hhmm(x.t)+'</div></div>'}).join(''):'<div class="mu">Nothing saved yet. Plans, entries and planner calcs show here (latest '+HCAP+' kept, oldest deleted).</div>')+(a.length?'<button id="hcl" class="sm">Clear history</button>':'')}
-function planHist(n){pushH({k:'plan',ty:(n.d>0?'BUY':'SELL')+' LIMIT',d:n.d,ent:n.ent,sl:n.sl,tp:n.t1,tp2:n.t2,str:n.str,why:n.why})}
+function usd(v){return (v>=0?'+$':'-$')+Math.abs(v).toFixed(2)}
+function rhist(){var a=USER?histGet(localStorage,USER):[],S=plSummary(a),h='';
+ $('hsm').innerHTML='📜 Past P/L · <span class="'+(S.total>0?'up':S.total<0?'dn':'mu')+'">'+(S.n?usd(S.total):'$0.00')+'</span> <span class="mu">('+a.length+'/'+HCAP+')</span>';
+ if(S.n)h+='<div class="plg" style="margin:8px 0"><div><span class="mu">Total P/L</span><br><b class="'+(S.total>0?'up':S.total<0?'dn':'')+'">'+usd(S.total)+'</b></div><div><span class="mu">Wins</span><br><b class="up">'+S.wins+'</b></div><div><span class="mu">Losses</span><br><b class="dn">'+S.losses+'</b></div><div><span class="mu">Win rate</span><br><b>'+(S.rate==null?'—':Math.round(S.rate*100)+'%')+'</b></div></div>'+(S.noUsd?'<div class="mu">Total $ counts XAUUSD trades only; '+S.noUsd+' other-symbol trade(s) show points.</div>':'');
+ h+=a.length?a.map(function(x){var dp=DP[x.sym]!=null?DP[x.sym]:2,fx=function(v){return v==null?'—':(+v).toFixed(dp)};
+  if(x.k=='closed'){var v=x.pl!=null?x.pl:x.pts,c=v>0?'up':v<0?'dn':'mu';
+   return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' · '+x.lot+' lot'+(x.res!='Closed'?' · <b>'+x.res+'</b>'+(x.r!=null?' ('+(x.r>0?'+':'')+x.r+'R)':''):'')+'<div class="mu">'+fx(x.ent)+' → '+fx(x.ext)+' · '+(x.pts>0?'+':'')+fx(x.pts)+' pts</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">'+ptFmt(x.ot)+' → '+ptFmt(x.t)+' PHT</div></div><div class="en '+c+'">'+(x.pl!=null?usd(x.pl):(x.pts>0?'+':'')+fx(x.pts)+'<div class="mu">pts</div>')+'</div></div>'}
+  return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' @ '+fx(x.ent)+'<div class="mu">SL '+fx(x.sl)+' · TP '+fx(x.tp)+(x.tp2!=null?' · TP2 '+fx(x.tp2):'')+(x.lot?' · lot '+x.lot:'')+(x.risk!=null?' · risk $'+x.risk:'')+'</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div><div class="mu">not a trade · '+ptFmt(x.t)+' PHT</div></div></div>'}).join(''):'<div class="mu">No closed trades yet. Tap ✕ on an entry or CLOSE, or let a trade plan hit TP/SL, and the result shows here (latest '+HCAP+' kept, oldest deleted).</div>';
+ $('hsb').innerHTML=h+(a.length?'<button id="hcl" class="sm" style="margin-top:8px">Clear history</button>':'')}
+function curLot(){return PN&&+PN.lot>0?+PN.lot:0.01}
+function isXau(){return SYM=='XAUUSD'}
+function logRows(rows){rows.forEach(function(r){pushH(r)})}
+function closeEntries(idx,all){var L=E(),sel_=all?L.slice():idx.map(function(i){return L[i]}).filter(Boolean);if(!sel_.length||prev==null)return;
+ logRows(groupClose(sel_,{sym:SYM,ext:prev,xau:isXau(),dp:DP[SYM],t:Date.now()}).map(function(r){return r}))}
+function logPlan(p){try{pushH(planResultRow(p,p.st,{sym:SYM,xau:isXau(),dp:DP[SYM],t:Date.now()}))}catch(e){}}
 // planner
 var PN={k:'sl',off:10,lot:0.01,slD:15,tpD:30,tpEd:false,acct:80};try{var _p=JSON.parse(localStorage.gdPN2||'null');if(_p&&otOf(_p.k))for(var _k in PN)if(_p[_k]!==undefined)PN[_k]=_p[_k]}catch(e){}
 function pnSv(){try{localStorage.gdPN2=JSON.stringify(PN)}catch(e){}}
