@@ -443,7 +443,7 @@ $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp
 $('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset the AUTO paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),'a');rhist();tick()}});
 $('hsb').addEventListener('click',function(e){var d=e.target.dataset||{};if(d.hf){HF=d.hf;try{localStorage.gdHF2=HF}catch(x){}rhist();return}if(d.rs&&USER){if(confirm('Reset the '+(d.rs=='a'?'AUTO':'MANUAL')+' paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),d.rs);rhist();tick()}return}if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
-function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000)}
+function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,30000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
 var G_KEY='gdAuth',FAILS=0,LOCKT=0;
 function gSess(){try{var s=JSON.parse(localStorage.getItem(G_KEY)||'null');return authSessOk(s)?s:null}catch(e){return null}}
