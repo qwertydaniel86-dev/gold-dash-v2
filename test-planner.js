@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,sigStep,sigRaw,relabelStr,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,sigStep,sigRaw,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -169,8 +169,8 @@ t('hysteresis: dips between half and full trigger keep BUY indefinitely',functio
 t('BUY → SELL needs 3 straight SELL ticks',function(){var st={s:'BUY',c:null,n:0};assert.deepStrictEqual(run([-0.02,-0.02,-0.02],null,st),['BUY','BUY','SELL']);st={s:'BUY',c:null,n:0};assert.deepStrictEqual(run([-0.02,-0.02,0.02,-0.02,-0.02],null,st),['BUY','BUY','BUY','BUY','BUY'])});
 t('SELL holds symmetric, and exits to WAIT after 3 ticks inside the band',function(){var st={s:'SELL',c:null,n:0};assert.deepStrictEqual(run([-0.0055,-0.0055,-0.0055],null,st),['SELL','SELL','SELL']);st={s:'SELL',c:null,n:0};assert.deepStrictEqual(run([-0.004,-0.004,-0.004],null,st),['SELL','SELL','WAIT'])});
 t('sigStep does not mutate its input',function(){var st={s:'WAIT',c:null,n:0},a=L.sigStep(st,0.05,0.009);assert.deepStrictEqual(st,{s:'WAIT',c:null,n:0});assert.notStrictEqual(a,st)});
-t('relabel: old 10-min strategy name becomes 2-min',function(){assert.strictEqual(L.relabelStr('Momentum (10-min move)'),'Momentum (2-min move)');assert.strictEqual(L.relabelStr('FVG retest'),'FVG retest');assert.strictEqual(L.relabelStr(undefined),undefined)});
-t('history read relabels old momentum entries',function(){var st=mem();st.setItem('gdH2_u',JSON.stringify([{str:'Momentum (10-min move)'},{str:'Pivot bounce'}]));var h=L.histGet(st,'u');assert.strictEqual(h[0].str,'Momentum (2-min move)');assert.strictEqual(h[1].str,'Pivot bounce')});
-t('no 10-min momentum wording left in the page; no biquote',function(){assert(!/10-min|10 min|Momentum \(10/i.test(src.replace(/function relabelStr[^\n]*/,'')));assert(!/biquote/i.test(src));assert(/Momentum \(2-min move\)/.test(src))});
+t('history read preserves old saved strategy labels',function(){var st=mem();st.setItem('gdH2_u',JSON.stringify([{str:'Momentum (10-min move)'},{str:'Momentum (2-min move)'},{str:'Pivot bounce'}]));var h=L.histGet(st,'u');assert.strictEqual(h[0].str,'Momentum (10-min move)');assert.strictEqual(h[1].str,'Momentum (2-min move)');assert.strictEqual(h[2].str,'Pivot bounce')});
+t('new signals are labelled 2-min; saved entries in source are never rewritten',function(){assert.strictEqual(L.sigInfo('BUY',0.02,0.009,{}).name,'Momentum (2-min move)');assert(!/relabel/i.test(src))});
+t('no 10-min momentum wording left in the page; no biquote',function(){assert(!/10-min|10 min|Momentum \(10/i.test(src));assert(!/biquote/i.test(src));assert(/Momentum \(2-min move\)/.test(src))});
 authTests().then(function(){console.log(n+' tests passed')});
 

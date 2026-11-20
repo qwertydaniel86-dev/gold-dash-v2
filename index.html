@@ -97,8 +97,7 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#spk,body.inpos #top>
 var HCAP=30;
 function hKey(u){return 'gdH2_'+String(u||'').toLowerCase()}
 function pushHist(a,it,cap){a=(a||[]).slice();a.unshift(it);cap=cap||HCAP;if(a.length>cap)a.length=cap;return a}
-function relabelStr(x){return x==='Momentum (10-min move)'?'Momentum (2-min move)':x}
-function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP).map(function(r){if(r&&r.str)r.str=relabelStr(r.str);return r}):[]}catch(e){return[]}}
+function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP):[]}catch(e){return[]}}
 function histAdd(st,u,it){if(!u)return[];var a=pushHist(histGet(st,u),it,HCAP);try{st.setItem(hKey(u),JSON.stringify(a))}catch(e){}return a}
 function zoneStrat(n){n=String(n||'');if(/FVG/.test(n))return 'FVG retest';if(/Swing/.test(n))return 'Swing high/low reject';if(/Range (high|low)/.test(n))return 'Range edge reject';if(/ pivot/.test(n))return 'Pivot bounce';if(/Day (high|low)/.test(n))return 'Day high/low reject';if(/Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
 function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled gap (FVG)':s=='Round-number reject'?'pullback to a round number':s=='Swing high/low reject'?'pullback to a recent swing level':s=='Range edge reject'?'pullback to the lookback range edge':'pullback to a zone'}
@@ -186,7 +185,7 @@ function API(){return BASE+'/'+SYM}
 function at(ms){var t=Date.now()-ms,b=null;for(var i=0;i<H.length;i++){if(H[i][0]<=t)b=H[i];else break}return b}
 async function j(u){var r=await fetch(u,{cache:'no-store'});return r.json()}
 function ld(k){try{return JSON.parse(localStorage[k]||'{}')||{}}catch(e){return{}}}
-var EA=ld('gdE2'),PA=ld('gdP2');for(var k0 in EA)(EA[k0]||[]).forEach(function(x){if(x&&x.str)x.str=relabelStr(x.str)});
+var EA=ld('gdE2'),PA=ld('gdP2');
 function E(){return EA[SYM]||(EA[SYM]=[])}function P(){return PA[SYM]||(PA[SYM]=[])}
 function sv(){try{localStorage.gdE2=JSON.stringify(EA);localStorage.gdP2=JSON.stringify(PA)}catch(e){}}
 function sel(){var h='';GR.forEach(function(g){h+='<optgroup label="'+g[0]+'">';g[1].forEach(function(s){var n=(EA[s[0]]||[]).length+(PA[s[0]]||[]).length;h+='<option value="'+s[0]+'"'+(s[0]==SYM?' selected':'')+'>'+s[0]+' · '+s[1]+(n?' ●'+n:'')+'</option>'});h+='</optgroup>'});$('sy').innerHTML=h}
