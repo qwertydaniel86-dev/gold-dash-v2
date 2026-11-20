@@ -75,6 +75,7 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#parts,body.inpos #to
 #parts{display:flex;gap:4px;margin-top:5px;font-size:11px}#parts span{flex:1;text-align:center;background:#141b23;border-radius:8px;padding:3px 0;white-space:nowrap;min-width:0}
 #arow{display:flex;gap:6px;justify-content:flex-start;align-items:center;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;color:#8b98a5}#arow .ag{display:flex;gap:4px;align-items:center}#arow i{font-style:normal}#arow em{font-style:normal;font-weight:700;font-size:9px;padding:1px 3px;border-radius:6px;background:#1f2a37}#arow em.up{color:#2fd27a}#arow em.dn{color:#ff5b5b}#arow em.none{color:#f5c542}#arow em.na{color:#8b98a5}
 .str{text-align:center;font-weight:800;letter-spacing:0}#top .str{white-space:nowrap}
+.at{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}.at .as{font-size:14px;font-weight:800}.at.up .as{color:#2fd27a}.at.dn .as{color:#ff5b5b}.at.none .as{color:#f5c542}.at.none{color:#9aa4b2}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div id="top"><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -177,7 +178,8 @@ function balReset(st,u,start,kind){var v=+(+start||0).toFixed(2),o={bal:v,start:
 function aroon(b,n){n=n||14;if(!b||b.length<n+1)return null;var w=b.slice(-(n+1)),hi=0,lo=0;for(var i=1;i<w.length;i++){if(w[i].high>=w[hi].high)hi=i;if(w[i].low<=w[lo].low)lo=i}return{up:100*(n-(n-hi))/n,down:100*(n-(n-lo))/n}}
 function aroonLabel(u,d){if(u>70&&d<30)return{k:'up',t:'Uptrend: buyers in control'};if(d>70&&u<30)return{k:'dn',t:'Downtrend: sellers in control'};return{k:'none',t:'No clear trend: wait'}}
 var aroonNote="Aroon confirms a trend that's already running, but it can't predict sudden spikes.";
-function aroonSeg(a){if(!a)return{u:'–',d:'–',k:'na',tag:'–'};var l=aroonLabel(a.up,a.down);return{u:String(Math.round(a.up)),d:String(Math.round(a.down)),k:l.k,tag:l.k=='up'?'UP':l.k=='dn'?'DOWN':'WAIT'}}
+function aroonSeg(a){if(!a)return{u:'–',d:'–',k:'na',tag:'–'};var l=aroonLabel(a.up,a.down);return{u:String(Math.round(a.up)),d:String(Math.round(a.down)),k:l.k,tag:l.k=='up'?'BUY':l.k=='dn'?'SELL':'WAIT'}}
+function aroonSigText(a){return 'Aroon signal: '+aroonSeg(a).tag}
 function aroonRow(A){return{m1:aroonSeg(A&&A.m1),m5:aroonSeg(A&&A.m5),h1:aroonSeg(A&&A.h1)}}
 var SV=2,SCALP={sgb:SIG_THR,slm:'pct',slv:0.05,t1m:'rr',t1v:1.5,t2m:'rr',t2v:3};/* scalping standard: SL 0.05% fixed, TP1 = 1.5x SL, TP2 = 3x SL, trigger 1 */
 function migrateC(c){var o={},k;if(c&&typeof c=='object')for(k in c)o[k]=c[k];if((o.sv||0)<SV){for(k in SCALP)o[k]=SCALP[k];o.sv=SV}return o}
@@ -251,7 +253,7 @@ async function aroonLoad(){if(ALb){ALagain=true;return}ALb=true;var sy=SYM;try{v
 function aroonRowOut(){var e=$('arow');if(!e)return;var r=aroonRow(AR);e.innerHTML='<b>Aroon</b>'+[['1m',r.m1],['5m',r.m5],['1h',r.h1]].map(function(x){var g=x[1],na=g.k=='na';return '<span class="ag"><i>'+x[0]+'</i> <span class="'+(na?'mu':'up')+'">▲'+g.u+'</span> <span class="'+(na?'mu':'dn')+'">▼'+g.d+'</span> <em class="'+g.k+'">'+g.tag+'</em></span>'}).join('')}
 function arr(){aroonRowOut();var c=$('arc');if(!AR){c.style.display='none';return}c.style.display='block';
  $('arl').innerHTML=[['1-minute',AR.m1],['5-minute',AR.m5],['1-hour',AR.h1]].map(function(r){var a=r[1];if(!a)return '<div class="lv"><span>'+r[0]+'</span><span class="mu">not enough data yet</span></div>';var l=aroonLabel(a.up,a.down);
-  return '<div class="ar"><div class="ah"><b>'+r[0]+'</b><span class="up">Up '+Math.round(a.up)+'</span><span class="dn">Down '+Math.round(a.down)+'</span></div><div class="at '+l.k+'">'+l.t+'</div></div>'}).join('')}
+  return '<div class="ar"><div class="ah"><b>'+r[0]+'</b><span class="up">Up '+Math.round(a.up)+'</span><span class="dn">Down '+Math.round(a.down)+'</span></div><div class="at '+l.k+'"><span>'+l.t+'</span><b class="as '+l.k+'">'+aroonSigText(a)+'</b></div></div>'}).join('')}
 function fvr(m){var w=$('fvw'),c=$('fvc');if(!C.fvg){w.style.display='none';c.style.display='none';return}
  var v=FV.filter(function(g){return g.t>0?m>g.lo:m<g.hi}).map(function(g){g.d=(m>=g.lo&&m<=g.hi)?0:Math.min(Math.abs(m-g.lo),Math.abs(m-g.hi));return g}).sort(function(a,b){return a.d-b.d}).slice(0,2);
  c.style.display=v.length?'block':'none';
