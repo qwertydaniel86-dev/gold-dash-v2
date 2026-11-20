@@ -30,23 +30,67 @@ body.inpos{padding-bottom:52vh}body.inpos #trade{position:fixed;left:0;right:0;b
 #cfg input[type=checkbox]{width:22px;height:22px}#cfg button{border:0;border-radius:8px;background:#334155;color:#fff;padding:8px 12px;font-size:14px;font-weight:700}
 .plh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:18px;margin:4px 0}.pls{font-size:13px;font-weight:800;border-radius:8px;padding:3px 8px;background:#24303c}.plg{display:flex;justify-content:space-between;text-align:center;margin:8px 0;font-size:15px}.cks{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:12px}.ck{white-space:nowrap}
 .pe .ew{color:#c4b5fd}.u{font-size:11px;color:#8b98a5;width:34px}
+
+#lg{display:none;position:fixed;inset:0;z-index:60;background:#0b0f14;align-items:center;justify-content:center;padding:20px}
+#lf{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}#lf h2{margin:0;font-size:22px}
+#lf input{background:#141b23;color:#e6edf3;border:1px solid #334155;border-radius:10px;padding:13px;font-size:16px}
+#lf button{border:0;border-radius:10px;background:#f5c542;color:#111;padding:13px;font-size:16px;font-weight:800}#lf #lrt{display:none;background:#334155;color:#fff}
+#lmsg{color:#ff8080;font-size:14px;min-height:18px}#gbn{display:none;background:#3b3320;color:#f5c542;font-size:12px;padding:8px;border-radius:8px;margin-top:8px}
+details.card{display:block}details.card>summary{font-weight:700;font-size:15px;cursor:pointer;padding:2px 0}details.card .fr input,details.card .fr select{background:#141b23;color:#e6edf3;border:1px solid #334155;border-radius:8px;padding:7px;font-size:15px;width:96px;box-sizing:border-box}
+.pnr{display:flex;align-items:center;gap:8px;background:#141b23;border-radius:10px;padding:8px 10px;margin-top:6px}.pnr span{flex:1;color:#8b98a5;font-size:13px}.pnr b{font-size:20px}
+.cp,.sm{border:0;border-radius:8px;background:#334155;color:#fff;padding:7px 11px;font-size:14px;font-weight:700;touch-action:manipulation}
+.wr{background:#5f1d1d;color:#ff8080;font-weight:700;font-size:13px;border-radius:8px;padding:8px 10px;margin-top:6px}
+.tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}#who a{color:#8b98a5}
 </style></head><body>
-<div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
+<div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in with your MPAT account</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><button id="lrt" type="button">Retry</button><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
+<div id="gbn"></div><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
 <p class="px" id="pxp"><span id="px">—</span> <span id="arr" style="font-size:44px"></span></p><div id="chg" class="mu">loading…</div>
-<div id="sig" class="badge WAIT">WAIT</div><div id="spk" class="spike"></div><div id="fvw" class="fv"></div>
+<div id="sig" class="badge WAIT">WAIT</div><div id="sgs"></div><div id="spk" class="spike"></div><div id="fvw" class="fv"></div>
 <div id="trade"><div class="btns"><button class="bb" id="bB">BUY</button><button class="bs" id="bS">SELL</button><button class="bc" id="bC">CLOSE</button></div>
 <div id="nt" class="mu" style="text-align:center;min-height:18px;margin-top:6px"></div><div id="pend"></div><div id="pos" style="display:none"></div></div>
 <div class="card" id="plc" style="margin-top:12px;display:none"></div>
+<details class="card" id="tpn" style="margin-top:12px"><summary>🧮 Trade planner (MT5)</summary><div id="tpb"></div></details>
+<details class="card" id="tps" style="margin-top:12px"><summary>💡 Beginner tips</summary><ul class="tips"><li>Always set a stop loss (S/L). No S/L, no trade.</li><li>Use 0.01 lot on a small account.</li><li>Take profit (T/P) about 2× your stop distance.</li><li>Don’t use a stop tighter than $10. Gold moves too much.</li><li>After the trade is +$10, move your S/L to break-even (your entry price).</li><li>Avoid 8:30–10:30 PM PH time and news times.</li><li>Delete unfilled pending orders before news.</li><li>Close your trades before the weekend.</li><li>A limit order only fills if price reaches it. No touch, no trade.</li></ul></details>
+<details class="card" id="hst" style="margin-top:12px"><summary id="hsm">📜 History</summary><div id="hsb"></div></details>
 <div class="row"><div class="card"><div class="mu">Signal move</div><div id="m10">—</div></div>
 <div class="card"><div class="mu" id="atl">Stop distance</div><div id="atr">—</div></div></div>
 <div class="row"><div class="card"><div class="mu">Day high / low</div><div id="hl">—</div></div></div>
 <div class="card" style="margin-top:12px"><div class="mu" id="lvt">Key levels</div><div id="lv"></div></div>
 <div class="card" id="fvc" style="margin-top:12px;display:none"><div class="mu">Open FVG (5m)</div><div id="fvl"></div></div>
 <canvas id="ch" width="700" height="280"></canvas>
-<div class="note">Alerts only, no trading. <b>Signals are not financial advice.</b></div>
+<div class="note">Alerts only, no trading. <b>Signals are not financial advice.</b></div><div class="note" id="who"></div>
 <div id="cfg"><div class="pn"></div></div>
 <script>
 
+/*LOGIC*/
+var HCAP=30;
+function hKey(u){return 'gdH2_'+String(u||'').toLowerCase()}
+function pushHist(a,it,cap){a=(a||[]).slice();a.unshift(it);cap=cap||HCAP;if(a.length>cap)a.length=cap;return a}
+function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP):[]}catch(e){return[]}}
+function histAdd(st,u,it){if(!u)return[];var a=pushHist(histGet(st,u),it,HCAP);try{st.setItem(hKey(u),JSON.stringify(a))}catch(e){}return a}
+function zoneStrat(n){n=String(n||'');if(/ pivot$/.test(n))return 'Pivot bounce';if(/^Day (high|low)/.test(n))return 'Day high/low reject';if(/FVG/.test(n))return 'FVG retest';if(/^Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
+function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled 5m gap (FVG)':s=='Round-number reject'?'pullback to a round number':'pullback to a zone'}
+function planWhy(d,zn,ent,rr,fx){return 'Trend '+(d>0?'up':'down')+' on 1H+4H (EMA20/50); '+(d>0?'buy':'sell')+' limit at '+zn+' '+fx(ent)+' ('+zoneWhy(zn)+'), R:R 1:'+rr.toFixed(1)}
+function sigInfo(s,p10,thr,TR){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,mv=(p10>=0?'+':'')+p10.toFixed(3)+'% in 10 min';
+ if(s=='WAIT')return{s:s,name:'No signal',why:'Move '+mv+' is under the ±'+thr+'% trigger'};
+ var t=td?((s=='BUY')==(td>0)?' · with 1H/4H trend':' · against 1H/4H trend'):'';
+ return{s:s,name:'Momentum (10-min move)',why:'Price '+mv+' (trigger ±'+thr+'%)'+t}}
+var OT=[['mb','Market Buy',1,0],['ms','Market Sell',-1,0],['bl','Buy Limit',1,-10],['sl','Sell Limit',-1,10],['bs','Buy Stop',1,10],['ss','Sell Stop',-1,-10]];
+function otOf(k){for(var i=0;i<OT.length;i++)if(OT[i][0]==k)return OT[i];return OT[0]}
+function rnd(x,dp){return +(+x).toFixed(dp)}
+function pnCalc(o){var t=otOf(o.k),d=t[2],mkt=t[0]=='mb'||t[0]=='ms',w=[],dp=o.dp,price=+o.price,lot=+o.lot,sd=+o.slD,td=+o.tpD,ac=+o.acct,off=mkt?0:+o.off;
+ if(!(price>0))return{ok:false,warn:['Waiting for live price…'],name:t[1],d:d};
+ if(!(sd>0))w.push('SL distance must be above 0');if(!(td>0))w.push('TP distance must be above 0');if(!(lot>0))w.push('Lot must be above 0');
+ if(isNaN(off))w.push('Type an entry offset');
+ if(!mkt&&!isNaN(off)){var pend=t[0]=='bl'||t[0]=='ss'?'below':'above',okd=pend=='below'?off<0:off>0;if(!okd)w.push(t[1]+' entry must be '+pend+' the live price (offset '+(pend=='below'?'negative':'positive')+')')}
+ var ent=rnd(price+(isNaN(off)?0:off),dp),sl=rnd(ent-d*(sd||0),dp),tp=rnd(ent+d*(td||0),dp),r={ok:true,name:t[1],d:d,mkt:mkt,ent:ent,sl:sl,tp:tp,xau:!!o.xau,warn:w,risk:null,rew:null,rr:null,pct:null};
+ if(sd>0&&td>0)r.rr=Math.abs(tp-ent)/Math.abs(ent-sl);
+ if(o.xau){if(lot>0&&sd>0)r.risk=rnd(Math.abs(ent-sl)*lot*100,2);if(lot>0&&td>0)r.rew=rnd(Math.abs(tp-ent)*lot*100,2);
+  if(r.risk!=null&&ac>0){r.pct=r.risk/ac*100;if(r.risk>ac*0.1+1e-9)w.push('Risk $'+r.risk.toFixed(2)+' is '+r.pct.toFixed(0)+'% of your $'+ac+' account (over 10%)')}
+  if(lot>=0.03-1e-9&&ac<=80)w.push('Lot '+lot+' is too big for a $'+ac+' account (use 0.01)');
+  if(sd>0&&sd<10)w.push('Stop is tighter than $10: easy to get stopped out')}
+ return r}
+/*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
 ['FX',[['EURUSD','EUR/USD',5],['GBPUSD','GBP/USD',5],['USDJPY','USD/JPY',3],['AUDUSD','AUD/USD',5],['USDCAD','USD/CAD',5],['USDCHF','USD/CHF',5],['NZDUSD','NZD/USD',5]]],
@@ -95,14 +139,14 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  $('st').textContent=closed?'· market closed':'· live';
  $('hl').textContent=f(q.high)+' / '+f(q.low);
  var b10=at(600000),p10=b10?(m/b10[1]-1)*100:0,s=p10>=C.sig?'BUY':p10<=-C.sig?'SELL':'WAIT';
- $('sig').className='badge '+s;$('sig').textContent=s;$('m10').innerHTML='<span class="'+(p10>=0?'up':'dn')+'">'+(p10>=0?'+':'')+p10.toFixed(3)+'%</span><div class="mu">10 min · ±'+C.sig+'%</div>';
+ $('sig').className='badge '+s;$('sig').textContent=s;sgShow(s,p10);$('m10').innerHTML='<span class="'+(p10>=0?'up':'dn')+'">'+(p10>=0?'+':'')+p10.toFixed(3)+'%</span><div class="mu">10 min · ±'+C.sig+'%</div>';
  var b2=at(120000),p2=b2?(m/b2[1]-1)*100:0,k=$('spk');
  if(Math.abs(p2)>=C.spk){k.style.display='block';k.className='spike '+(p2>0?'BUY':'SELL');k.textContent=(p2>0?'▲ SPIKE UP ':'▼ SPIKE DOWN ')+p2.toFixed(2)+'% / 2 min'}else k.style.display='none';var A=$('arr');if(Math.abs(p2)>=C.spk){A.textContent=p2>0?'▲':'▼';A.className=p2>0?'arr-up':'arr-dn'}else{A.textContent='';A.className=''}
  var sd=slD(m),mdn={pct:C.slv+'%',atr:C.slv+'×ATR',pts:C.slv+' pts'}[C.slm];$('atl').textContent='Stop distance ('+mdn+')';
  $('atr').innerHTML=f(sd)+'<div class="mu">long '+f(m-sd)+' · short '+f(m+sd)+'</div>';
  var ni=0;LV.forEach(function(l,i){if(Math.abs(l[1]-m)<Math.abs(LV[ni][1]-m))ni=i});$('lvt').textContent='Key levels ('+LVsrc+')';
  $('lv').innerHTML=LV.map(function(l,i){return '<div class="lv'+(i==ni?' near':'')+'"><span>'+l[0]+' '+f(l[1])+(i==ni?' ← nearest':'')+'</span><span class="mu">'+(l[1]-m>=0?'+':'')+f(l[1]-m)+'</span></div>'}).join('');
- fvr(m);pend(m);pos();try{planTick(m)}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
+ fvr(m);pend(m);pos();try{planTick(m)}catch(e){}try{pnOut()}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
 function fvr(m){var w=$('fvw'),c=$('fvc');if(!C.fvg){w.style.display='none';c.style.display='none';return}
  var v=FV.filter(function(g){return g.t>0?m>g.lo:m<g.hi}).map(function(g){g.d=(m>=g.lo&&m<=g.hi)?0:Math.min(Math.abs(m-g.lo),Math.abs(m-g.hi));return g}).sort(function(a,b){return a.d-b.d}).slice(0,2);
  c.style.display=v.length?'block':'none';
@@ -121,21 +165,21 @@ function lvls(x){var d=x.d,p=x.p,s=slD(p),a=atr||p*0.002,L=LV.map(function(l){re
  if(C.tr){var td=C.trm=='pct'?p*C.trv/100:C.trv*a;if(td>0){var ts=x.b-d*td;if(d*(ts-se)>0){se=ts;kd='tr'}}}
  return{t1:t1,t2:t2,sl:sl,se:se,kd:kd}}
 var NT=0;function note(x){var n=$('nt');n.textContent=x;clearTimeout(NT);NT=setTimeout(function(){n.textContent=''},2500)}
-function addE(d,p,tag){var l=E();if(l.length>=C.mx){note('Max entries: '+C.mx);return false}l.push({d:d,p:p,b:p});sv();sel();note((tag||(d>0?'BUY':'SELL'))+' #'+l.length+' '+SYM+' at '+f(p));pos();return true}
-function add(d){if(prev==null)return;addE(d,prev)}
+function addE(d,p,tag,str,why){var l=E();if(l.length>=C.mx){note('Max entries: '+C.mx);return false}var x={d:d,p:p,b:p,str:str||'Manual',why:why||''};l.push(x);sv();sel();note((tag||(d>0?'BUY':'SELL'))+' #'+l.length+' '+SYM+' at '+f(p));pos();var v=lvls(x);pushH({k:'entry',ty:d>0?'BUY':'SELL',d:d,ent:p,sl:v.sl,tp:v.t1,tp2:v.t2,str:x.str,why:x.why});return true}
+function add(d){if(prev==null)return;var g=SIG&&SIG.s==(d>0?'BUY':'SELL');addE(d,prev,null,g?SIG.name:'Manual',g?SIG.why:'No matching signal when you tapped')}
 function tap(el,fn){var t=0;el.addEventListener('touchend',function(e){e.preventDefault();t=Date.now();fn()},{passive:false});el.addEventListener('click',function(){if(Date.now()-t>600)fn()})}
 tap($('bB'),function(){add(1)});tap($('bS'),function(){add(-1)});tap($('bC'),function(){EA[SYM]=[];sv();sel();note('All closed');pos()});
 $('pos').addEventListener('click',function(e){var x=e.target.closest('[data-x]');if(x){E().splice(+x.dataset.x,1);sv();sel();pos()}});
 $('pend').addEventListener('click',function(e){var x=e.target.closest('[data-px]');if(x){P().splice(+x.dataset.px,1);sv();sel();pend(prev)}});
 var PN={BS:['BUY STOP',1,1],BL:['BUY LIMIT',1,-1],SS:['SELL STOP',-1,-1],SL:['SELL LIMIT',-1,1]};
-function pend(m){var b=$('pend'),l=P();if(m!=null&&!closed){for(var i=l.length-1;i>=0;i--){var o=l[i],n=PN[o.k],hit=n[2]>0?m>=o.lv:m<=o.lv;if(hit&&addE(n[1],o.lv,n[0]+' hit →'+(n[1]>0?' BUY':' SELL'))){l.splice(i,1);sv();sel()}}}
+function pend(m){var b=$('pend'),l=P();if(m!=null&&!closed){for(var i=l.length-1;i>=0;i--){var o=l[i],n=PN[o.k],hit=n[2]>0?m>=o.lv:m<=o.lv;if(hit&&addE(n[1],o.lv,n[0]+' hit →'+(n[1]>0?' BUY':' SELL'),'Pending order (yours)',n[0]+' '+f(o.lv)+' was reached')){l.splice(i,1);sv();sel()}}}
  b.innerHTML=l.map(function(o,i){var n=PN[o.k];return '<div class="ent pe"><div class="el"><b class="'+(n[1]>0?'up':'dn')+'">'+n[0]+'</b> '+SYM+'<div class="mu">@ '+f(o.lv)+'</div></div><div class="ew">⏳ PENDING</div><div class="en mu">'+(m!=null?(o.lv-m>=0?'+':'')+f(o.lv-m):'')+'</div><button class="ex" data-px="'+i+'">✕</button></div>'}).join('')}
 function pos(){var b=$('pos'),L=E();document.body.classList.toggle('inpos',L.length>0);
  if(!L.length||prev==null){b.style.display='none';return}
  var m=prev,b2=at(120000),mv2=b2?(m/b2[1]-1)*100:0,ch=false;b.style.display='block';
  b.innerHTML=L.map(function(x,i){var d=x.d,v=lvls(x),pt=(m-x.p)*d;if(d*(m-x.b)>0){x.b=m;ch=true}
   var w='',wc='mu';if(d*(m-v.se)<=0){w=v.kd=='tr'?'🔒 TRAIL STOP':v.kd=='be'?'🔒 BREAKEVEN':'⛔ STOP LOSS';wc='dn'}else if(d*(m-v.t2)>=0){w='✅ TAKE ALL (TP2)';wc='up'}else if(d*(m-v.t1)>=0){w='💰 TAKE PROFIT (TP1)';wc='up'}else if(d*mv2<=-C.sig){w='↘ AGAINST YOU';wc='dn'}else if(pt>0&&((d>0&&$('sig').textContent==='SELL')||(d<0&&$('sig').textContent==='BUY'))){w='⚠ SECURE PROFIT';wc='WAITc'}else if(d*mv2>=C.sig){w='↗ YOUR WAY';wc='up'}else w='→ Flat';
-  return '<div class="ent"><div class="el"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' #'+(i+1)+'</b> '+SYM+' @ '+f(x.p)+'<div class="mu">TP1 '+f(v.t1)+' · TP2 '+f(v.t2)+' · SL '+f(v.se)+(v.kd!='sl'?' ('+(v.kd=='be'?'BE':'trail')+')':'')+'</div></div><div class="ew '+wc+(w.charAt(0)==='→'?'':' bl')+'">'+w+'</div><div class="en '+(pt>=0?'up':'dn')+'">'+(pt>=0?'+':'')+f(pt)+'<div class="mu">'+(pt>=0?'+':'')+(pt/x.p*100).toFixed(3)+'%</div></div><button class="ex" data-x="'+i+'">✕</button></div>'}).join('');
+  return '<div class="ent"><div class="el"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' #'+(i+1)+'</b> '+SYM+' @ '+f(x.p)+(x.str?'<div class="mu">'+x.str+'</div>':'')+'<div class="mu">TP1 '+f(v.t1)+' · TP2 '+f(v.t2)+' · SL '+f(v.se)+(v.kd!='sl'?' ('+(v.kd=='be'?'BE':'trail')+')':'')+'</div></div><div class="ew '+wc+(w.charAt(0)==='→'?'':' bl')+'">'+w+'</div><div class="en '+(pt>=0?'up':'dn')+'">'+(pt>=0?'+':'')+f(pt)+'<div class="mu">'+(pt>=0?'+':'')+(pt/x.p*100).toFixed(3)+'%</div></div><button class="ex" data-x="'+i+'">✕</button></div>'}).join('');
  if(ch)sv()}
 // trade plan (phase 1)
 var CAT={};GR.forEach(function(g){g[1].forEach(function(s){CAT[s[0]]=g[0]=='Crypto'?'c':(g[0]=='Metals'||g[0]=='FX')?'f':'u'})});
@@ -162,7 +206,7 @@ function mkPlan(m,d){var a=atr||m*0.002,Z=zones(d,m,a),zn=Z.z[0];if(!zn)return{w
  var T=Z.T.filter(function(v){return d*(v-ent)>0}).sort(function(u,w){return d*(u-w)}),
  L1=T.filter(function(v){return d*(v-ent)>=0.5*risk})[0],t1=(L1!=null&&d*(L1-ent)<1.5*risk)?L1:ent+d*1.5*risk,
  L2=T.filter(function(v){return d*(v-t1)>=0.25*risk})[0],cap=Math.max(3,C.plrr)*risk,t2=(L2!=null&&d*(L2-ent)<cap)?L2:ent+d*cap,rr=Math.abs(t2-ent)/risk;
- return{d:d,ent:ent,sl:sl,t1:t1,t2:t2,rr:rr,zn:zn.n,st:'Waiting',rk:risk}}
+ return{d:d,ent:ent,sl:sl,t1:t1,t2:t2,rr:rr,zn:zn.n,st:'Waiting',rk:risk,str:zoneStrat(zn.n),why:planWhy(d,zn.n,ent,rr,f)}}
 var AX=null;function beep(){try{AX=AX||new (window.AudioContext||window.webkitAudioContext)();var o=AX.createOscillator(),g=AX.createGain();o.connect(g);g.connect(AX.destination);o.frequency.value=880;g.gain.value=0.15;o.start();o.stop(AX.currentTime+0.25)}catch(e){}try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
 function pst(p,s,now){p.st=s;if(s=='Expired'||s=='Cancelled'||s=='SL hit'||s=='TP2 hit')p.cl=now}
 function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
@@ -179,7 +223,7 @@ function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
   if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!tr)msg='No plan, timeframes disagree';else if(closed)msg='No plan, market closed';else if(!se.ok)msg='No plan, outside good session ('+se.w+' PHT)';
   else{var n=mkPlan(m,h1.d);if(n.why)msg='No plan, '+n.why;else{cks[3][1]=n.rr>=C.plrr-1e-9;
     if(!cks[3][1])msg='No plan, R:R 1:'+n.rr.toFixed(1)+' is below 1:'+C.plrr+' ('+(n.d>0?'Buy':'Sell')+' Limit '+f(n.ent)+' · '+n.zn+')';
-    else{n.ct=now;n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);delete PLA[SYM];PLA[SYM]=n;p=n;svP();note(SYM+' new '+(n.d>0?'BUY':'SELL')+' LIMIT plan @ '+f(n.ent))}}}
+    else{n.ct=now;n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);delete PLA[SYM];PLA[SYM]=n;p=n;svP();planHist(n);note(SYM+' new '+(n.d>0?'BUY':'SELL')+' LIMIT plan @ '+f(n.ent))}}}
   if(!(p&&p.ct))p=null}
  rplan(m,p,cks,msg,h1,h4)}
 function svP(){try{localStorage.gdPL2=JSON.stringify(PLA)}catch(e){}}
@@ -188,7 +232,7 @@ function ckh(l){return l.map(function(x){return '<span class="ck '+(x[1]===null?
 function rplan(m,p,cks,msg,h1,h4){var c=$('plc'),a=atr||m*0.002,now=Date.now(),h='<div class="mu">Trade plan · '+SYM+' · 1H '+tg(h1)+' · 4H '+tg(h4)+'</div>';
  if(p&&p.ct){var d=p.d,r=p.rk,sc=p.cl?(p.st=='TP2 hit'?'up':p.st=='SL hit'?'dn':'mu'):p.st=='Waiting'?'WAITc':p.st=='Near entry'?'WAITc bl':p.st=='SL hit'?'dn':'up',left=p.ex-now;
   cks=[['Trend agrees',true],['Market open',!closed],['Session good',true],['R:R 1:'+p.rr.toFixed(1)+' OK',true]];
-  h+='<div class="plh"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' LIMIT @ '+f(p.ent)+'</b><span class="pls '+sc+'">'+p.st+'</span></div><div class="mu">Zone: '+p.zn+' · '+f(Math.abs(m-p.ent))+(p.ent>m?' above':' below')+' price</div>'+
+  h+='<div class="plh"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' LIMIT @ '+f(p.ent)+'</b><span class="pls '+sc+'">'+p.st+'</span></div><div class="mu">Zone: '+p.zn+' · '+f(Math.abs(m-p.ent))+(p.ent>m?' above':' below')+' price</div><div class="mu">Strategy: <b>'+(p.str||zoneStrat(p.zn))+'</b>'+(p.why?'<br>'+p.why:'')+'</div>'+
   '<div class="plg"><div><span class="mu">SL</span><br><b class="dn">'+f(p.sl)+'</b></div><div><span class="mu">TP1</span><br><b class="up">'+f(p.t1)+'</b></div><div><span class="mu">TP2</span><br><b class="up">'+f(p.t2)+'</b></div><div><span class="mu">R:R</span><br><b>1:'+p.rr.toFixed(1)+'</b></div></div>'+
   '<div class="mu">'+(p.cl?'Closed '+hhmm(p.cl)+' PHT · new plan in '+Math.max(0,Math.ceil((PLCD-(now-p.cl))/1000))+'s':'Valid until '+hhmm(p.ex)+' PHT · '+(left>0?Math.floor(left/36e5)+'h '+('0'+Math.floor(left%36e5/6e4)).slice(-2)+'m '+('0'+Math.floor(left%6e4/1000)).slice(-2)+'s left':'expired')+(p.fl?' · filled '+hhmm(p.fl):''))+'</div>'}
  else h+='<div class="plh"><b class="WAITc">'+msg+'</b></div>';
@@ -230,5 +274,87 @@ $('cfg').addEventListener('change',function(e){var t=e.target,k=t.dataset.k;if(!
 $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS2=SYM}catch(e){}
  H=[];prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
  $('lv').innerHTML='';$('fvc').style.display='none';$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
-sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000);
+/* ---- history / signal / planner UI ---- */
+var USER=null,booted=false,SIG=null;
+function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
+function rhist(){var a=USER?histGet(localStorage,USER):[];$('hsm').textContent='📜 History ('+a.length+'/'+HCAP+')';
+ $('hsb').innerHTML=(a.length?a.map(function(x){var d=new Date(x.t+288e5),dp=DP[x.sym]!=null?DP[x.sym]:2,fx=function(v){return v==null?'—':(+v).toFixed(dp)};
+  return '<div class="ent"><div class="el"><b class="'+(x.d>0?'up':'dn')+'">'+x.ty+'</b> '+x.sym+' @ '+fx(x.ent)+'<div class="mu">SL '+fx(x.sl)+' · TP '+fx(x.tp)+(x.tp2!=null?' · TP2 '+fx(x.tp2):'')+(x.lot?' · lot '+x.lot:'')+(x.risk!=null?' · risk $'+x.risk:'')+'</div><div class="mu"><b>'+x.str+'</b>'+(x.why?' — '+x.why:'')+'</div></div><div class="en mu">'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2)+'<br>'+hhmm(x.t)+'</div></div>'}).join(''):'<div class="mu">Nothing saved yet. Plans, entries and planner calcs show here (latest '+HCAP+' kept, oldest deleted).</div>')+(a.length?'<button id="hcl" class="sm">Clear history</button>':'')}
+function planHist(n){pushH({k:'plan',ty:(n.d>0?'BUY':'SELL')+' LIMIT',d:n.d,ent:n.ent,sl:n.sl,tp:n.t1,tp2:n.t2,str:n.str,why:n.why})}
+// planner
+var PN={k:'sl',off:10,lot:0.01,slD:15,tpD:30,tpEd:false,acct:80};try{var _p=JSON.parse(localStorage.gdPN2||'null');if(_p&&otOf(_p.k))for(var _k in PN)if(_p[_k]!==undefined)PN[_k]=_p[_k]}catch(e){}
+function pnSv(){try{localStorage.gdPN2=JSON.stringify(PN)}catch(e){}}
+function pnBuild(){var o=OT.map(function(t){return '<option value="'+t[0]+'"'+(PN.k==t[0]?' selected':'')+'>'+t[1]+'</option>'}).join('');
+ function row(l,id,v,st){return '<div class="fr"><span>'+l+'</span><input id="'+id+'" type="number" inputmode="decimal" step="'+st+'" value="'+v+'"></div>'}
+ $('tpb').innerHTML='<div class="fr"><span>Order type</span><select id="pnT">'+o+'</select></div>'+row('Entry offset $ (+ above / − below price)','pnO',PN.off,'any')+row('Lot','pnL',PN.lot,'0.01')+row('SL distance $','pnS',PN.slD,'any')+row('TP distance $ (2× SL until you edit)','pnP',PN.tpD,'any')+row('Account $','pnA',PN.acct,'any')+'<div id="pnR"></div>';pnSync()}
+function pnSync(){var m=otOf(PN.k)[0].charAt(0)=='m';$('pnO').disabled=m;$('pnO').value=m?0:PN.off}
+function pnVal(id){var v=parseFloat($(id).value);return isNaN(v)?NaN:v}
+function pnCur(){var q=lastQ||{};return{k:PN.k,price:prev,off:PN.off,lot:PN.lot,slD:PN.slD,tpD:PN.tpD,acct:PN.acct,dp:DP[SYM],xau:SYM=='XAUUSD'}}
+function cpb(v){return '<button class="cp" data-c="'+v+'">Copy</button>'}
+function pnOut(){if(!$('pnR'))return;var r=pnCalc(pnCur()),dp=DP[SYM],h='';
+ if(r.ok){var cl=r.d>0?'up':'dn';
+  h+='<div class="plh" style="margin-top:10px"><b class="'+cl+'">'+r.name.toUpperCase()+'</b><span class="mu">'+SYM+' live '+f(prev)+'</span></div>'+
+  '<div class="pnr"><span>'+(r.mkt?'Entry (market)':'Entry')+'</span><b>'+r.ent.toFixed(dp)+'</b>'+cpb(r.ent.toFixed(dp))+'</div>'+
+  '<div class="pnr"><span>S/L</span><b class="dn">'+r.sl.toFixed(dp)+'</b>'+cpb(r.sl.toFixed(dp))+'</div>'+
+  '<div class="pnr"><span>T/P</span><b class="up">'+r.tp.toFixed(dp)+'</b>'+cpb(r.tp.toFixed(dp))+'</div>';
+  if(r.xau)h+='<div class="plg"><div><span class="mu">Risk</span><br><b class="dn">'+(r.risk==null?'—':'$'+r.risk.toFixed(2))+'</b></div><div><span class="mu">Reward</span><br><b class="up">'+(r.rew==null?'—':'$'+r.rew.toFixed(2))+'</b></div><div><span class="mu">R:R</span><br><b>'+(r.rr==null?'—':'1:'+r.rr.toFixed(1))+'</b></div><div><span class="mu">% of acct</span><br><b>'+(r.pct==null?'—':r.pct.toFixed(0)+'%')+'</b></div></div>';
+  else h+='<div class="mu" style="margin-top:6px">$ risk/reward is only calculated for XAUUSD (0.01 lot = $1 per $1). Distances here are in price units.</div>';
+  if(r.mkt)h+='<div class="mu">Market order fills at the live price when you tap, so the real fill can differ a little.</div>'}
+ h+=r.warn.map(function(x){return '<div class="wr">⚠ '+x+'</div>'}).join('');
+ if(r.ok)h+='<button id="pnSave" class="sm" style="margin-top:8px">Save to history</button>';
+ $('pnR').innerHTML=h;PNR=r}
+var PNR=null;
+function cpy(t,b){function ok(){var o=b.textContent;b.textContent='✓';setTimeout(function(){b.textContent=o},900)}
+ try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+ function fb(){try{var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity=0;document.body.appendChild(a);a.select();document.execCommand('copy');document.body.removeChild(a);ok()}catch(e){}}}
+$('tpb').addEventListener('input',function(e){var id=e.target.id,v=pnVal(id);
+ if(id=='pnO')PN.off=v;else if(id=='pnL')PN.lot=v;else if(id=='pnA')PN.acct=v;
+ else if(id=='pnS'){PN.slD=v;if(!PN.tpEd&&!isNaN(v)){PN.tpD=+(v*2).toFixed(4);$('pnP').value=PN.tpD}}
+ else if(id=='pnP'){PN.tpD=v;PN.tpEd=true}
+ pnSv();pnOut()});
+$('tpb').addEventListener('change',function(e){if(e.target.id=='pnT'){PN.k=e.target.value;PN.off=otOf(PN.k)[3];pnSv();pnSync();pnOut()}});
+$('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp')cpy(t.dataset.c,t);
+ else if(t.id=='pnSave'&&PNR&&PNR.ok){var r=PNR;pushH({k:'calc',ty:r.name.toUpperCase(),d:r.d,ent:r.ent,sl:r.sl,tp:r.tp,lot:PN.lot,risk:r.risk,str:'Manual planner',why:'Saved from the trade planner'+(r.xau?'':' (price levels only)')});t.textContent='Saved ✓';setTimeout(function(){t.textContent='Save to history'},1200)}});
+$('hsb').addEventListener('click',function(e){if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
+function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
+function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000)}
+/* ---- sign-in: same MPAT Guard server + accounts as MPAT Practice (shared session on this site) ---- */
+var GUARD_URL='https://script.google.com/macros/s/AKfycbxjOhBYKHDKQN1AgnBSwxy2Rmxqbs0Z-L95kIV5mp6YelYzUEvaRg74Z22hUoIE80Y9/exec',G_KEY='mpatGuard',G_DEV='mpatDev',G_OFF=24*3600e3,G_HB=5*60e3,G_LAST=0;
+function gOfflineOk(s,now){return !!(s&&s.tok&&s.at&&now>=s.at-6e4&&now-s.at<G_OFF)}
+function gSess(){try{var s=JSON.parse(localStorage.getItem(G_KEY)||'null');return s&&s.u&&s.tok?s:null}catch(e){return null}}
+function gSave(s){try{localStorage.setItem(G_KEY,JSON.stringify(s))}catch(e){}}
+function gClear(){try{localStorage.removeItem(G_KEY)}catch(e){}}
+function gDev(){var d=null;try{d=localStorage.getItem(G_DEV)}catch(e){}if(d&&/^d-[a-z0-9]{8,40}$/.test(d))return d;var b=new Uint8Array(16);crypto.getRandomValues(b);d='d-';for(var i=0;i<b.length;i++)d+=('0'+b[i].toString(36)).slice(-2);d=d.slice(0,34);try{localStorage.setItem(G_DEV,d)}catch(e){}return d}
+function gUa(ua){ua=String(ua||'');var os=/iPhone/.test(ua)?'iPhone':/iPad/.test(ua)?'iPad':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/CrOS/.test(ua)?'Chromebook':/Mac OS X|Macintosh/.test(ua)?'Mac':/Linux/.test(ua)?'Linux':'Unknown OS';
+ var br=/Edg[A-Z]?\//.test(ua)?'Edge':/OPR\/|Opera/.test(ua)?'Opera':/SamsungBrowser/.test(ua)?'Samsung Internet':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'Browser';return br+' · '+os}
+async function sha256hex(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+async function gCall(a,o){o=o||{};o.a=a;var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=ctl?setTimeout(function(){ctl.abort()},15000):0;
+ try{var r=await fetch(GUARD_URL,{method:'POST',body:JSON.stringify(o),redirect:'follow',credentials:'omit',cache:'no-store',signal:ctl?ctl.signal:undefined});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{if(tm)clearTimeout(tm)}}
+function lgMsg(t,retry){$('lmsg').textContent=t||'';$('lrt').style.display=retry?'block':'none'}
+function lgShow(t,retry){USER=null;$('lg').style.display='flex';lgMsg(t,retry)}
+function gMsgOf(r){r=r||{};if(r.code=='bad')return 'Wrong username or password.'+(r.left>0&&r.left<=3?' '+r.left+' more wrong attempt'+(r.left>1?'s':'')+' will lock this account for 15 minutes.':'');
+ if(r.code=='locked')return 'Too many failed attempts. Locked, try again in '+r.mins+' min.';
+ if(r.code=='full')return 'This account is already on '+r.n+' devices (limit '+r.max+'). Open MPAT Practice, go to Devices and remove one, then try again.';
+ if(r.code=='net')return 'Can’t reach the login server. Check your internet and try again.';
+ if(r.code=='busy')return 'Login server is busy. Try again in a moment.';return r.msg||'Login failed. Please try again.'}
+function gRevoked(why){return why=='removed'?'This device was removed from your account. Sign in again.':why=='password_changed'?'Your password was changed. Sign in with the new password.':why=='expired'?'You were signed out after 14 days without use. Please sign in.':'Your session has ended. Please sign in again.'}
+function enter(s){USER=s.u;$('lg').style.display='none';$('lp').value='';$('who').innerHTML='Signed in as <b>'+(s.name||s.u).replace(/[<>&"]/g,'')+'</b> · <a href="#" id="sgo">Sign out</a>';rhist();if(!booted){booted=true;boot()}}
+async function gCheck(){var s=gSess();if(!s){lgShow('');return}var r=null;try{r=await gCall('hb',{u:s.u,tok:s.tok,dev:gDev()})}catch(e){r=null}G_LAST=Date.now();s=gSess();if(!s){lgShow('');return}
+ if(r&&r.ok){s.at=Date.now();s.n=r.n;s.max=r.max;s.admin=!!r.admin;s.name=r.name;gSave(s);$('gbn').style.display='none';enter(s);return}
+ if(r&&r.code=='revoked'){gClear();lgShow(gRevoked(r.why));return}
+ if(gOfflineOk(s,Date.now())){$('gbn').textContent='Offline: can’t reach the login server. Saved sign-in works until '+new Date(s.at+G_OFF).toLocaleString()+'.';$('gbn').style.display='block';enter(s);return}
+ if(booted&&USER)return;lgShow('Can’t reach the login server, and this device wasn’t verified in the last 24 hours. Connect and tap Retry.',true)}
+$('lf').addEventListener('submit',async function(ev){ev.preventDefault();var u=$('lu').value.trim().toLowerCase(),p=$('lp').value;if(!u||!p){lgMsg('Type your username and password.');return}
+ if(!window.crypto||!crypto.subtle){lgMsg('Secure login needs HTTPS.');return}var bt=$('lgo');bt.disabled=true;lgMsg('Signing in…');var r;
+ try{var h=await sha256hex(u+':'+p);r=await gCall('login',{u:u,h:h,dev:gDev(),ua:navigator.userAgent.slice(0,200),label:gUa(navigator.userAgent)})}catch(e){r={ok:false,code:'net'}}
+ bt.disabled=false;if(!r||!r.ok){lgMsg(gMsgOf(r));return}
+ var s={u:r.u,tok:r.tok,at:Date.now(),n:r.n,max:r.max,admin:!!r.admin,name:r.name};gSave(s);G_LAST=Date.now();enter(s)});
+$('lrt').addEventListener('click',function(){lgMsg('Checking your sign-in…');gCheck()});
+$('who').addEventListener('click',function(e){if(e.target.id=='sgo'){e.preventDefault();gClear();lgShow('Signed out. (Also signs out MPAT Practice on this browser.)')}});
+function authStart(){var s=gSess();if(!s){lgShow('');return}
+ if(gOfflineOk(s,Date.now())){enter(s);gCheck()}else{lgShow('Checking your sign-in…');gCheck()}
+ setInterval(function(){if(document.visibilityState!=='hidden'&&gSess())gCheck()},G_HB);
+ document.addEventListener('visibilitychange',function(){if(document.visibilityState=='visible'&&gSess()&&Date.now()-G_LAST>G_HB)gCheck()})}
+authStart();
+
 </script></body></html>
