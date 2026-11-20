@@ -42,7 +42,7 @@ details.card{display:block}details.card>summary{font-weight:700;font-size:15px;c
 .wr{background:#5f1d1d;color:#ff8080;font-weight:700;font-size:13px;border-radius:8px;padding:8px 10px;margin-top:6px}
 .tips{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.45}.tips li{margin:3px 0}#sgs{text-align:center;font-size:13px;color:#c9d4de;margin-top:6px;min-height:18px}#who{margin-top:6px}#who a{color:#8b98a5}
 </style></head><body>
-<div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in with your MPAT account</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><button id="lrt" type="button">Retry</button><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
+<div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
 <p class="px" id="pxp"><span id="px">—</span> <span id="arr" style="font-size:44px"></span></p><div id="chg" class="mu">loading…</div>
 <div id="sig" class="badge WAIT">WAIT</div><div id="sgs"></div><div id="spk" class="spike"></div><div id="fvw" class="fv"></div>
@@ -90,6 +90,11 @@ function pnCalc(o){var t=otOf(o.k),d=t[2],mkt=t[0]=='mb'||t[0]=='ms',w=[],dp=o.d
   if(lot>=0.03-1e-9&&ac<=80)w.push('Lot '+lot+' is too big for a $'+ac+' account (use 0.01)');
   if(sd>0&&sd<10)w.push('Stop is tighter than $10: easy to get stopped out')}
  return r}
+var GD_AUTH={u:'dan',name:'Dan Sorix',salt:'382629c3356e57b81989ba5d72dd845a',it:200000,h:'5639fc59f317a3b28224925f5f03a82bd404703bc62fd6d21e0b1ef7f195f890'};
+function hexOf(b){return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+async function pbkHex(pw,saltHex,it){var sb=new Uint8Array(saltHex.match(/../g).map(function(x){return parseInt(x,16)})),k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return hexOf(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:sb,iterations:it},k,256))}
+async function authCheck(u,p){if(String(u||'').trim().toLowerCase()!==GD_AUTH.u)return null;var h=await pbkHex(String(p||''),GD_AUTH.salt,GD_AUTH.it);return h===GD_AUTH.h?h:null}
+function authSessOk(s){return !!(s&&s.u===GD_AUTH.u&&s.k===GD_AUTH.h)}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -318,43 +323,21 @@ $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp
 $('hsb').addEventListener('click',function(e){if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
 function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,60000)}
-/* ---- sign-in: same MPAT Guard server + accounts as MPAT Practice (shared session on this site) ---- */
-var GUARD_URL='https://script.google.com/macros/s/AKfycbxjOhBYKHDKQN1AgnBSwxy2Rmxqbs0Z-L95kIV5mp6YelYzUEvaRg74Z22hUoIE80Y9/exec',G_KEY='mpatGuard',G_DEV='mpatDev',G_OFF=24*3600e3,G_HB=5*60e3,G_LAST=0;
-function gOfflineOk(s,now){return !!(s&&s.tok&&s.at&&now>=s.at-6e4&&now-s.at<G_OFF)}
-function gSess(){try{var s=JSON.parse(localStorage.getItem(G_KEY)||'null');return s&&s.u&&s.tok?s:null}catch(e){return null}}
-function gSave(s){try{localStorage.setItem(G_KEY,JSON.stringify(s))}catch(e){}}
-function gClear(){try{localStorage.removeItem(G_KEY)}catch(e){}}
-function gDev(){var d=null;try{d=localStorage.getItem(G_DEV)}catch(e){}if(d&&/^d-[a-z0-9]{8,40}$/.test(d))return d;var b=new Uint8Array(16);crypto.getRandomValues(b);d='d-';for(var i=0;i<b.length;i++)d+=('0'+b[i].toString(36)).slice(-2);d=d.slice(0,34);try{localStorage.setItem(G_DEV,d)}catch(e){}return d}
-function gUa(ua){ua=String(ua||'');var os=/iPhone/.test(ua)?'iPhone':/iPad/.test(ua)?'iPad':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/CrOS/.test(ua)?'Chromebook':/Mac OS X|Macintosh/.test(ua)?'Mac':/Linux/.test(ua)?'Linux':'Unknown OS';
- var br=/Edg[A-Z]?\//.test(ua)?'Edge':/OPR\/|Opera/.test(ua)?'Opera':/SamsungBrowser/.test(ua)?'Samsung Internet':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'Browser';return br+' · '+os}
-async function sha256hex(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
-async function gCall(a,o){o=o||{};o.a=a;var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=ctl?setTimeout(function(){ctl.abort()},15000):0;
- try{var r=await fetch(GUARD_URL,{method:'POST',body:JSON.stringify(o),redirect:'follow',credentials:'omit',cache:'no-store',signal:ctl?ctl.signal:undefined});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{if(tm)clearTimeout(tm)}}
-function lgMsg(t,retry){$('lmsg').textContent=t||'';$('lrt').style.display=retry?'block':'none'}
-function lgShow(t,retry){USER=null;$('lg').style.display='flex';lgMsg(t,retry)}
-function gMsgOf(r){r=r||{};if(r.code=='bad')return 'Wrong username or password.'+(r.left>0&&r.left<=3?' '+r.left+' more wrong attempt'+(r.left>1?'s':'')+' will lock this account for 15 minutes.':'');
- if(r.code=='locked')return 'Too many failed attempts. Locked, try again in '+r.mins+' min.';
- if(r.code=='full')return 'This account is already on '+r.n+' devices (limit '+r.max+'). Open MPAT Practice, go to Devices and remove one, then try again.';
- if(r.code=='net')return 'Can’t reach the login server. Check your internet and try again.';
- if(r.code=='busy')return 'Login server is busy. Try again in a moment.';return r.msg||'Login failed. Please try again.'}
-function gRevoked(why){return why=='removed'?'This device was removed from your account. Sign in again.':why=='password_changed'?'Your password was changed. Sign in with the new password.':why=='expired'?'You were signed out after 14 days without use. Please sign in.':'Your session has ended. Please sign in again.'}
-function enter(s){USER=s.u;$('lg').style.display='none';$('lp').value='';$('who').innerHTML='Signed in as <b>'+(s.name||s.u).replace(/[<>&"]/g,'')+'</b> · <a href="#" id="sgo">Sign out</a>';rhist();if(!booted){booted=true;boot()}}
-async function gCheck(){var s=gSess();if(!s){lgShow('');return}var r=null;try{r=await gCall('hb',{u:s.u,tok:s.tok,dev:gDev()})}catch(e){r=null}G_LAST=Date.now();s=gSess();if(!s){lgShow('');return}
- if(r&&r.ok){s.at=Date.now();s.n=r.n;s.max=r.max;s.admin=!!r.admin;s.name=r.name;gSave(s);$('gbn').style.display='none';enter(s);return}
- if(r&&r.code=='revoked'){gClear();lgShow(gRevoked(r.why));return}
- if(gOfflineOk(s,Date.now())){$('gbn').textContent='Offline: can’t reach the login server. Saved sign-in works until '+new Date(s.at+G_OFF).toLocaleString()+'.';$('gbn').style.display='block';enter(s);return}
- if(booted&&USER)return;lgShow('Can’t reach the login server, and this device wasn’t verified in the last 24 hours. Connect and tap Retry.',true)}
-$('lf').addEventListener('submit',async function(ev){ev.preventDefault();var u=$('lu').value.trim().toLowerCase(),p=$('lp').value;if(!u||!p){lgMsg('Type your username and password.');return}
- if(!window.crypto||!crypto.subtle){lgMsg('Secure login needs HTTPS.');return}var bt=$('lgo');bt.disabled=true;lgMsg('Signing in…');var r;
- try{var h=await sha256hex(u+':'+p);r=await gCall('login',{u:u,h:h,dev:gDev(),ua:navigator.userAgent.slice(0,200),label:gUa(navigator.userAgent)})}catch(e){r={ok:false,code:'net'}}
- bt.disabled=false;if(!r||!r.ok){lgMsg(gMsgOf(r));return}
- var s={u:r.u,tok:r.tok,at:Date.now(),n:r.n,max:r.max,admin:!!r.admin,name:r.name};gSave(s);G_LAST=Date.now();enter(s)});
-$('lrt').addEventListener('click',function(){lgMsg('Checking your sign-in…');gCheck()});
-$('who').addEventListener('click',function(e){if(e.target.id=='sgo'){e.preventDefault();gClear();lgShow('Signed out. (Also signs out MPAT Practice on this browser.)')}});
-function authStart(){var s=gSess();if(!s){lgShow('');return}
- if(gOfflineOk(s,Date.now())){enter(s);gCheck()}else{lgShow('Checking your sign-in…');gCheck()}
- setInterval(function(){if(document.visibilityState!=='hidden'&&gSess())gCheck()},G_HB);
- document.addEventListener('visibilitychange',function(){if(document.visibilityState=='visible'&&gSess()&&Date.now()-G_LAST>G_HB)gCheck()})}
+/* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
+var G_KEY='gdAuth',FAILS=0,LOCKT=0;
+function gSess(){try{var s=JSON.parse(localStorage.getItem(G_KEY)||'null');return authSessOk(s)?s:null}catch(e){return null}}
+function lgMsg(t){$('lmsg').textContent=t||''}
+function lgShow(t){USER=null;$('lg').style.display='flex';lgMsg(t)}
+function enter(){USER=GD_AUTH.u;$('lg').style.display='none';$('lp').value='';$('who').innerHTML='Signed in as <b>'+GD_AUTH.name+'</b> · <a href="#" id="sgo">Sign out</a>';rhist();if(!booted){booted=true;boot()}}
+$('lf').addEventListener('submit',async function(ev){ev.preventDefault();var u=$('lu').value,p=$('lp').value;if(!u||!p){lgMsg('Type your username and password.');return}
+ if(Date.now()<LOCKT){lgMsg('Too many tries. Wait '+Math.ceil((LOCKT-Date.now())/1000)+' s.');return}
+ if(!window.crypto||!crypto.subtle){lgMsg('Secure sign-in needs HTTPS.');return}var bt=$('lgo');bt.disabled=true;lgMsg('Signing in…');var h=null;
+ try{h=await authCheck(u,p)}catch(e){}bt.disabled=false;
+ if(!h){FAILS++;if(FAILS>=5){FAILS=0;LOCKT=Date.now()+30000;lgMsg('Too many tries. Wait 30 s.')}else lgMsg('Wrong username or password.');return}
+ FAILS=0;try{localStorage.setItem(G_KEY,JSON.stringify({u:GD_AUTH.u,k:h,at:Date.now()}))}catch(e){}enter()});
+$('who').addEventListener('click',function(e){if(e.target.id=='sgo'){e.preventDefault();try{localStorage.removeItem(G_KEY)}catch(x){}lgShow('Signed out.')}});
+window.addEventListener('storage',function(e){if(e.key==G_KEY&&!gSess())lgShow('Signed out.')});
+function authStart(){if(gSess())enter();else lgShow('')}
 authStart();
 
 </script></body></html>

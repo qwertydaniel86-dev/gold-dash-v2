@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -35,4 +35,13 @@ t('zone → strategy',function(){assert.strictEqual(L.zoneStrat('S1 pivot'),'Piv
 t('signal strategy label + reason',function(){var up={'1h':{d:1},'4h':{d:1}},a=L.sigInfo('BUY',0.031,0.02,up);assert.strictEqual(a.name,'Momentum (10-min move)');assert(/\+0\.031% in 10 min/.test(a.why)&&/with 1H\/4H trend/.test(a.why));
  assert(/against 1H\/4H trend/.test(L.sigInfo('SELL',-0.03,0.02,up).why));assert(!/trend/.test(L.sigInfo('BUY',0.03,0.02,{'1h':{d:1},'4h':{d:-1}}).why));var w=L.sigInfo('WAIT',0.005,0.02,up);assert.strictEqual(w.name,'No signal');assert(/under the ±0\.02%/.test(w.why))});
 t('plan reason is one line, mentions trend + zone',function(){var w=L.planWhy(1,'S1 pivot',4800,2.1,function(x){return x.toFixed(2)});assert(!/\n/.test(w));assert(/Trend up on 1H\+4H/.test(w)&&/S1 pivot 4800\.00/.test(w)&&/R:R 1:2\.1/.test(w))});
-console.log(n+' tests passed');
+var PW=process.env.GD_PW;
+async function authTests(){
+ if(!PW){console.log('SKIP auth tests (set GD_PW to run)');return}
+ var ok=await L.authCheck('Dan',PW);assert(ok&&ok===L.GD_AUTH.h);n++;console.log('ok auth: correct password');
+ assert.strictEqual(await L.authCheck('dan ',PW),ok);n++;console.log('ok auth: username case/space-insensitive');
+ assert.strictEqual(await L.authCheck('Dan',PW+'x'),null);assert.strictEqual(await L.authCheck('Dan',PW.toLowerCase()),null);assert.strictEqual(await L.authCheck('Dan',''),null);n++;console.log('ok auth: wrong password rejected');
+ assert.strictEqual(await L.authCheck('daniel',PW),null);assert.strictEqual(await L.authCheck('',PW),null);n++;console.log('ok auth: wrong username rejected');
+ assert(L.authSessOk({u:'dan',k:L.GD_AUTH.h}));assert(!L.authSessOk({u:'dan',k:'x'}));assert(!L.authSessOk({u:'dan'}));assert(!L.authSessOk(null));n++;console.log('ok auth: stored session must carry the hash');
+ assert(src.split(L.GD_AUTH.name).join('').toLowerCase().indexOf(PW.toLowerCase())<0,'no plaintext in source (besides the display name)');assert(/^[0-9a-f]{32}$/.test(L.GD_AUTH.salt)&&L.GD_AUTH.it>=100000);n++;console.log('ok auth: salted PBKDF2, no plaintext in source')}
+authTests().then(function(){console.log(n+' tests passed')});
