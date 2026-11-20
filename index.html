@@ -63,16 +63,17 @@ body{padding-top:0}
 #top>.hd,#top>h1{grid-column:1;grid-row:1}
 #pxrow{grid-column:1;grid-row:2/span 8;flex-direction:column;align-items:stretch;gap:4px}
 #top .px{font-size:34px}#pxrow #ch{height:52px;flex:none;width:100%}
-#top>#sig,#top>.btns,#top>#nt,#top>#stats,#top>#parts,#top>#spk,#top>#fvw,#top>#str{grid-column:2}
+#top>#sig,#top>.btns,#top>#nt,#top>#stats,#top>#parts,#top>#arow,#top>#spk,#top>#fvw,#top>#str{grid-column:2}
 #top .badge{margin-top:4px}
 body.inpos #top>.hd,body.inpos #top>h1{grid-column:1/-1}
 body.inpos #pxrow{grid-column:1/-1;grid-row:auto;flex-direction:row;align-items:center}
 body.inpos #pxrow #ch{height:46px;flex:1;width:auto}
 body.inpos #top>#sig{grid-column:1}body.inpos #top>.btns{grid-column:2;margin-top:4px}
-body.inpos #top>#nt,body.inpos #top>#stats,#top>#parts,body.inpos #top>#spk,body.inpos #top>#fvw,body.inpos #top>#str{grid-column:1/-1}
+body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#parts,body.inpos #top>#arow,body.inpos #top>#spk,body.inpos #top>#fvw,body.inpos #top>#str{grid-column:1/-1}
 }
 .ar{padding:8px 0;border-top:1px solid #1f2a37}.ar:first-of-type{border-top:0}.ah{display:flex;gap:14px;align-items:baseline;font-size:15px}.ah b{flex:1;font-size:14px}.at{margin-top:4px;font-weight:700;font-size:14px;color:#9aa4b2}.at.up{color:#2fd27a}.at.dn{color:#ff5b5b}
 #parts{display:flex;gap:4px;margin-top:5px;font-size:11px}#parts span{flex:1;text-align:center;background:#141b23;border-radius:8px;padding:3px 0;white-space:nowrap;min-width:0}
+#arow{display:flex;gap:10px;justify-content:flex-start;align-items:center;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;color:#8b98a5}#arow .ag{display:flex;gap:4px;align-items:center}#arow i{font-style:normal}#arow em{font-style:normal;font-weight:700;font-size:10px;padding:1px 5px;border-radius:6px;background:#1f2a37}#arow em.up{color:#2fd27a}#arow em.dn{color:#ff5b5b}#arow em.none{color:#f5c542}#arow em.na{color:#8b98a5}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div id="top"><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -80,7 +81,7 @@ body.inpos #top>#nt,body.inpos #top>#stats,#top>#parts,body.inpos #top>#spk,body
 <div id="sig" class="badge WAIT">WAIT</div><div id="spk" class="spike"></div><div id="fvw" class="fv"></div>
 <div class="btns"><button class="bb" id="bB">BUY</button><button class="bs" id="bS">SELL</button><button class="bc" id="bC">CLOSE</button></div>
 <div id="nt" class="mu"></div>
-<div id="stats"><div class="card"><div class="mu">Signal score</div><div id="m10">—</div></div><div class="card"><div class="mu" id="atl">Stop distance</div><div id="atr">—</div></div><div class="card dh"><div class="mu">Day high / low</div><div id="hl">—</div></div></div><div id="parts"></div></div>
+<div id="stats"><div class="card"><div class="mu">Signal score</div><div id="m10">—</div></div><div class="card"><div class="mu" id="atl">Stop distance</div><div id="atr">—</div></div><div class="card dh"><div class="mu">Day high / low</div><div id="hl">—</div></div></div><div id="parts"></div><div id="arow"></div></div>
 <div id="sgs"></div>
 <div class="card" style="margin-top:12px"><div class="mu" id="lvt">Key levels</div><div id="lv"></div></div>
 <div class="card" id="fvc" style="margin-top:12px;display:none"><div class="mu">Open FVG (5m)</div><div id="fvl"></div></div>
@@ -172,6 +173,8 @@ function balReset(st,u,start,kind){var v=+(+start||0).toFixed(2),o={bal:v,start:
 function aroon(b,n){n=n||14;if(!b||b.length<n+1)return null;var w=b.slice(-(n+1)),hi=0,lo=0;for(var i=1;i<w.length;i++){if(w[i].high>=w[hi].high)hi=i;if(w[i].low<=w[lo].low)lo=i}return{up:100*(n-(n-hi))/n,down:100*(n-(n-lo))/n}}
 function aroonLabel(u,d){if(u>70&&d<30)return{k:'up',t:'Uptrend: buyers in control'};if(d>70&&u<30)return{k:'dn',t:'Downtrend: sellers in control'};return{k:'none',t:'No clear trend: wait'}}
 var aroonNote="Aroon confirms a trend that's already running, but it can't predict sudden spikes.";
+function aroonSeg(a){if(!a)return{u:'–',d:'–',k:'na',tag:'–'};var l=aroonLabel(a.up,a.down);return{u:String(Math.round(a.up)),d:String(Math.round(a.down)),k:l.k,tag:l.k=='up'?'UP':l.k=='dn'?'DOWN':'WAIT'}}
+function aroonRow(A){return{m5:aroonSeg(A&&A.m5),h1:aroonSeg(A&&A.h1)}}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -238,7 +241,8 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  fvr(m);try{arr()}catch(e){}pend(m);pos();try{planTick(m)}catch(e){}try{pnOut()}catch(e){}try{draw()}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
 var ALb=false,ALagain=false;
 async function aroonLoad(){if(ALb){ALagain=true;return}ALb=true;var sy=SYM;try{var r=await Promise.all(['5m','1h'].map(function(iv){return j(API()+'/ohlc?interval='+iv+'&limit=40').then(function(d){return aroon(d.bars.slice().reverse(),14)}).catch(function(){return null})}));if(sy==SYM){AR={m5:r[0],h1:r[1]};arr()}}catch(e){}ALb=false;if(ALagain){ALagain=false;if(sy!=SYM)aroonLoad()}}
-function arr(){var c=$('arc');if(!AR){c.style.display='none';return}c.style.display='block';
+function aroonRowOut(){var e=$('arow');if(!e)return;var r=aroonRow(AR);e.innerHTML='<b>Aroon</b>'+[['5m',r.m5],['1h',r.h1]].map(function(x){var g=x[1],na=g.k=='na';return '<span class="ag"><i>'+x[0]+'</i> <span class="'+(na?'mu':'up')+'">▲'+g.u+'</span> <span class="'+(na?'mu':'dn')+'">▼'+g.d+'</span> <em class="'+g.k+'">'+g.tag+'</em></span>'}).join('')}
+function arr(){aroonRowOut();var c=$('arc');if(!AR){c.style.display='none';return}c.style.display='block';
  $('arl').innerHTML=[['5-minute',AR.m5],['1-hour',AR.h1]].map(function(r){var a=r[1];if(!a)return '<div class="lv"><span>'+r[0]+'</span><span class="mu">not enough data yet</span></div>';var l=aroonLabel(a.up,a.down);
   return '<div class="ar"><div class="ah"><b>'+r[0]+'</b><span class="up">Up '+Math.round(a.up)+'</span><span class="dn">Down '+Math.round(a.down)+'</span></div><div class="at '+l.k+'">'+l.t+'</div></div>'}).join('')}
 function fvr(m){var w=$('fvw'),c=$('fvc');if(!C.fvg){w.style.display='none';c.style.display='none';return}
@@ -392,7 +396,7 @@ $('cfg').addEventListener('change',function(e){var t=e.target,k=t.dataset.k;if(!
  svC();if(t.dataset.m)rcfg();if(prev!=null){tick()}});
 $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS2=SYM}catch(e){}
  H=[];SG={s:'WAIT',c:null,n:0};LS=0;partsOut(null);prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};LBD={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
- $('lv').innerHTML='';$('fvc').style.display='none';AR=null;$('arc').style.display='none';aroonLoad();$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
+ $('lv').innerHTML='';$('fvc').style.display='none';AR=null;aroonRowOut();$('arc').style.display='none';aroonLoad();$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
 /* ---- history / signal / planner UI ---- */
 var USER=null,booted=false,SIG=null,LS=0,SG={s:'WAIT',c:null,n:0};
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
@@ -454,7 +458,7 @@ $('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confi
 $('hsb').addEventListener('click',function(e){var d=e.target.dataset||{};if(d.hf){HF=d.hf;try{localStorage.gdHF2=HF}catch(x){}rhist();return}if(d.rs&&USER){if(confirm('Reset the '+(d.rs=='a'?'AUTO':'MANUAL')+' paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),d.rs);rhist();tick()}return}if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function partsOut(P){var e=$('parts');if(!e)return;var nm={30000:'30s',60000:'1m',120000:'2m',300000:'5m',600000:'10m'};e.innerHTML=P?P.map(function(x){var c=x.p>0?'up':x.p<0?'dn':'mu';return '<span class="'+c+'">'+nm[x.ms]+' '+(x.p>0?'▲':x.p<0?'▼':'–')+Math.abs(x.p).toFixed(3)+'</span>'}).join(''):''}
 function sgShow(s,sc){SIG=sigInfo(s,sc,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
-function boot(){pnBuild();sel();pend(null);candles().then(tick);aroonLoad();setInterval(tick,1500);setInterval(candles,30000);setInterval(aroonLoad,15000)}
+function boot(){aroonRowOut();pnBuild();sel();pend(null);candles().then(tick);aroonLoad();setInterval(tick,1500);setInterval(candles,30000);setInterval(aroonLoad,15000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
 var G_KEY='gdAuth',FAILS=0,LOCKT=0;
 function gSess(){try{var s=JSON.parse(localStorage.getItem(G_KEY)||'null');return authSessOk(s)?s:null}catch(e){return null}}

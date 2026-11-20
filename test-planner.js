@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,aroonSeg,aroonRow,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -184,6 +184,18 @@ t('sigBase: exact boundary and tolerance; sigTol grows with window',function(){v
 t('15 min of 1.5s history covers the full 10-min window (>=600 points)',function(){var now=1e6,h=hist(now,1500,900000,function(){return 1});assert(h.length>=600);assert(L.sigBase(h,now,600000,L.sigTol(600000)))});
 t('new signals are labelled with the blend name; no relabel code',function(){assert.strictEqual(L.sigInfo('BUY',SC(2),{}).name,'Momentum (30s-weighted, 1-10 min)');assert(!/relabel/i.test(src))});
 t('history read preserves old saved strategy labels',function(){var st=mem();st.setItem('gdH2_u',JSON.stringify([{str:'Momentum (10-min move)'},{str:'Momentum (2-min move)'},{str:'Pivot bounce'}]));var h=L.histGet(st,'u');assert.strictEqual(h[0].str,'Momentum (10-min move)');assert.strictEqual(h[1].str,'Momentum (2-min move)');assert.strictEqual(h[2].str,'Pivot bounce')});
-t('no old momentum labels in page; no biquote',function(){assert(!/10-min move|Momentum \(10|Momentum \(2-min|Momentum \(30-sec/i.test(src));assert(!/biquote/i.test(src));assert(src.indexOf('Momentum (30s-weighted, 1-10 min)')>0)});
+t('no old momentum labels in page; no biquote',function(){assert(/id="arow"/.test(src));assert(!/10-min move|Momentum \(10|Momentum \(2-min|Momentum \(30-sec/i.test(src));assert(!/biquote/i.test(src));assert(src.indexOf('Momentum (30s-weighted, 1-10 min)')>0)});
+
+// Aroon top row segment
+t('aroonSeg: values rounded, colour kind and tag',function(){
+ assert.deepStrictEqual(L.aroonSeg({up:14.28,down:100}),{u:'14',d:'100',k:'dn',tag:'DOWN'});assert.deepStrictEqual(L.aroonSeg({up:40,down:100}),{u:'40',d:'100',k:'none',tag:'WAIT'});
+ assert.deepStrictEqual(L.aroonSeg({up:100,down:0}),{u:'100',d:'0',k:'up',tag:'UP'});
+ assert.deepStrictEqual(L.aroonSeg({up:0,down:100}),{u:'0',d:'100',k:'dn',tag:'DOWN'});
+ assert.deepStrictEqual(L.aroonSeg({up:50,down:50}),{u:'50',d:'50',k:'none',tag:'WAIT'});
+ assert.strictEqual(L.aroonSeg({up:71,down:29}).tag,'UP');assert.strictEqual(L.aroonSeg({up:70,down:29}).tag,'WAIT');assert.strictEqual(L.aroonSeg({up:29,down:71}).tag,'DOWN');assert.strictEqual(L.aroonSeg({up:30,down:71}).tag,'WAIT')});
+t('aroonSeg: missing data shows dashes',function(){var na={u:'–',d:'–',k:'na',tag:'–'};assert.deepStrictEqual(L.aroonSeg(null),na);assert.deepStrictEqual(L.aroonSeg(undefined),na)});
+t('aroonRow: 5m and 1h from AR, dashes when AR is null or half-loaded',function(){
+ var r=L.aroonRow({m5:{up:14,down:100},h1:{up:0,down:50}});assert.strictEqual(r.m5.u,'14');assert.strictEqual(r.m5.d,'100');assert.strictEqual(r.h1.u,'0');assert.strictEqual(r.h1.d,'50');
+ var n=L.aroonRow(null);assert.strictEqual(n.m5.u,'–');assert.strictEqual(n.h1.d,'–');var h=L.aroonRow({m5:{up:100,down:0},h1:null});assert.strictEqual(h.m5.tag,'UP');assert.strictEqual(h.h1.tag,'–')});
 authTests().then(function(){console.log(n+' tests passed')});
 
