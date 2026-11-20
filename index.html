@@ -73,8 +73,8 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#parts,body.inpos #to
 }
 .ar{padding:8px 0;border-top:1px solid #1f2a37}.ar:first-of-type{border-top:0}.ah{display:flex;gap:14px;align-items:baseline;font-size:15px}.ah b{flex:1;font-size:14px}.at{margin-top:4px;font-weight:700;font-size:14px;color:#9aa4b2}.at.up{color:#2fd27a}.at.dn{color:#ff5b5b}
 #parts{display:flex;gap:4px;margin-top:5px;font-size:11px}#parts span{flex:1;text-align:center;background:#141b23;border-radius:8px;padding:3px 0;white-space:nowrap;min-width:0}
-#arow{display:flex;gap:10px;justify-content:flex-start;align-items:center;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;color:#8b98a5}#arow .ag{display:flex;gap:4px;align-items:center}#arow i{font-style:normal}#arow em{font-style:normal;font-weight:700;font-size:10px;padding:1px 5px;border-radius:6px;background:#1f2a37}#arow em.up{color:#2fd27a}#arow em.dn{color:#ff5b5b}#arow em.none{color:#f5c542}#arow em.na{color:#8b98a5}
-.str{text-align:center;font-weight:800;letter-spacing:1px}
+#arow{display:flex;gap:6px;justify-content:flex-start;align-items:center;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;color:#8b98a5}#arow .ag{display:flex;gap:4px;align-items:center}#arow i{font-style:normal}#arow em{font-style:normal;font-weight:700;font-size:9px;padding:1px 3px;border-radius:6px;background:#1f2a37}#arow em.up{color:#2fd27a}#arow em.dn{color:#ff5b5b}#arow em.none{color:#f5c542}#arow em.na{color:#8b98a5}
+.str{text-align:center;font-weight:800;letter-spacing:0}#top .str{white-space:nowrap}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div id="top"><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -105,7 +105,7 @@ function histAdd(st,u,it){if(!u)return[];var a=pushHist(histGet(st,u),it,HCAP);t
 function zoneStrat(n){n=String(n||'');if(/FVG/.test(n))return 'FVG retest';if(/Swing/.test(n))return 'Swing high/low reject';if(/Range (high|low)/.test(n))return 'Range edge reject';if(/ pivot/.test(n))return 'Pivot bounce';if(/Day (high|low)/.test(n))return 'Day high/low reject';if(/Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
 function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled gap (FVG)':s=='Round-number reject'?'pullback to a round number':s=='Swing high/low reject'?'pullback to a recent swing level':s=='Range edge reject'?'pullback to the lookback range edge':'pullback to a zone'}
 function planWhy(d,zn,ent,rr,fx,info){info=info||{};return 'Trend '+(d>0?'up':'down')+' on 1H+4H (EMA20/50); '+(d>0?'buy':'sell')+' limit at '+zn+' '+fx(ent)+' ('+zoneWhy(zn)+')'+(info.n>1?'; '+info.n+' zone types line up':'')+(info.tc>0?'; '+info.tc+' past touch'+(info.tc>1?'es':''):'')+', R:R 1:'+rr.toFixed(1)}
-var SIG_THR=1,SIG_CONF=3,SIG_NAME='Momentum (30s-weighted, 1-10 min)';/* blend score: each window's % move / its own trigger 0.02% x sqrt(window/10min), weighted; BUY >= +1, SELL <= -1; held until |score| < 0.5; a change must repeat SIG_CONF ticks */
+var SIG_THR=1,SIG_CONF=2,SIG_NAME='Momentum (30s-weighted, 1-10 min)';/* blend score: each window's % move / its own trigger 0.02% x sqrt(window/10min), weighted; BUY >= +1, SELL <= -1; held until |score| < 0.5; a change must repeat SIG_CONF ticks */
 var SIG_W=[{ms:30000,w:0.4},{ms:60000,w:0.2},{ms:120000,w:0.15},{ms:300000,w:0.15},{ms:600000,w:0.1}];
 function sigThr(ms){return 0.02*Math.sqrt(ms/600000)}
 function sigTol(ms){return Math.max(10000,ms*0.25)}
@@ -113,12 +113,13 @@ function sigBase(H,now,ms,tol){var t=now-ms,b=null;for(var i=0;i<H.length;i++){i
 function sigScore(H,now,m){var sc=0,parts=SIG_W.map(function(x){var b=sigBase(H,now,x.ms,sigTol(x.ms)),p=b?(m/b[1]-1)*100:0,z=p/sigThr(x.ms);sc+=x.w*z;return{ms:x.ms,w:x.w,p:p,z:z}});return{score:sc,parts:parts}}
 function sigRaw(p,thr,cur){var b=thr/2;if(cur=='BUY'&&p>=b)return 'BUY';if(cur=='SELL'&&p<=-b)return 'SELL';return p>=thr?'BUY':p<=-thr?'SELL':'WAIT'}
 function sigStep(st,p,thr){var r=sigRaw(p,thr,st.s);if(r==st.s)return{s:st.s,c:null,n:0};var n=st.c==r?st.n+1:1;return n>=SIG_CONF?{s:r,c:null,n:0}:{s:st.s,c:r,n:n}}
-function m30Move(b,m){return b&&b.length>30?(m/b[b.length-31].close-1)*100:null}
-function sigStrength(s,sc,m30){if(s!='BUY'&&s!='SELL')return{k:'',tw:0,m30:m30};var tw=m30==null?0:(s=='BUY'?(m30>0?1:-1):(m30<0?1:-1));return{k:Math.abs(sc)>=2&&tw>0?'STRONG':'WEAK',tw:tw,m30:m30}}
-function sigInfo(s,sc,TR,st){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,v=sc.score,mv='score '+(v>=0?'+':'')+v.toFixed(2);
+function m15Move(b,m){return b&&b.length>15?(m/b[b.length-16].close-1)*100:null}
+function sigStrength(s,sc,m15){if(s!='BUY'&&s!='SELL')return{k:'',tw:0,m15:m15};var tw=m15==null?0:(s=='BUY'?(m15>0?1:-1):(m15<0?1:-1));return{k:Math.abs(sc)>=2&&tw>0?'STRONG':'WEAK',tw:tw,m15:m15}}
+function aroonAgree(s,g){if((s!='BUY'&&s!='SELL')||!g||g.k=='na')return '';if(g.k=='none')return 'none';return (s=='BUY')==(g.k=='up')?'with':'against'}
+function sigInfo(s,sc,TR,st,a1){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,v=sc.score,mv='score '+(v>=0?'+':'')+v.toFixed(2);
  if(s=='WAIT')return{s:s,name:'No signal',why:'Blend '+mv+' is inside ±1 (needs +1 to buy, -1 to sell)'};
  var t=td?((s=='BUY')==(td>0)?' · with 1H/4H trend':' · against 1H/4H trend'):'';
- return{s:s,name:SIG_NAME,why:(st&&st.k?st.k+' '+s+(st.k=='STRONG'?' (30m trend agrees)':'')+' · ':'')+'Blend '+mv+' (trigger ±1; 30s 40%, 1m 20%, 2m 15%, 5m 15%, 10m 10%)'+t}}
+ return{s:s,name:SIG_NAME,why:(st&&st.k?st.k+' '+s+(st.k=='STRONG'?' (15m trend agrees)':'')+' · ':'')+'Blend '+mv+' (trigger ±1; 30s 40%, 1m 20%, 2m 15%, 5m 15%, 10m 10%)'+t+(function(){var a=aroonAgree(s,a1);return a=='with'?' · with 1m Aroon':a=='against'?' · against 1m Aroon':a=='none'?' · 1m Aroon: no clear trend':''})()}}
 var OT=[['mb','Market Buy',1,0],['ms','Market Sell',-1,0],['bl','Buy Limit',1,-10],['sl','Sell Limit',-1,10],['bs','Buy Stop',1,10],['ss','Sell Stop',-1,-10]];
 function otOf(k){for(var i=0;i<OT.length;i++)if(OT[i][0]==k)return OT[i];return OT[0]}
 function rnd(x,dp){return +(+x).toFixed(dp)}
@@ -177,7 +178,9 @@ function aroon(b,n){n=n||14;if(!b||b.length<n+1)return null;var w=b.slice(-(n+1)
 function aroonLabel(u,d){if(u>70&&d<30)return{k:'up',t:'Uptrend: buyers in control'};if(d>70&&u<30)return{k:'dn',t:'Downtrend: sellers in control'};return{k:'none',t:'No clear trend: wait'}}
 var aroonNote="Aroon confirms a trend that's already running, but it can't predict sudden spikes.";
 function aroonSeg(a){if(!a)return{u:'–',d:'–',k:'na',tag:'–'};var l=aroonLabel(a.up,a.down);return{u:String(Math.round(a.up)),d:String(Math.round(a.down)),k:l.k,tag:l.k=='up'?'UP':l.k=='dn'?'DOWN':'WAIT'}}
-function aroonRow(A){return{m5:aroonSeg(A&&A.m5),h1:aroonSeg(A&&A.h1)}}
+function aroonRow(A){return{m1:aroonSeg(A&&A.m1),m5:aroonSeg(A&&A.m5),h1:aroonSeg(A&&A.h1)}}
+var SV=2,SCALP={sgb:SIG_THR,slm:'pct',slv:0.05,t1m:'rr',t1v:1.5,t2m:'rr',t2v:3};/* scalping standard: SL 0.05% fixed, TP1 = 1.5x SL, TP2 = 3x SL, trigger 1 */
+function migrateC(c){var o={},k;if(c&&typeof c=='object')for(k in c)o[k]=c[k];if((o.sv||0)<SV){for(k in SCALP)o[k]=SCALP[k];o.sv=SV}return o}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -187,7 +190,8 @@ GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]
 ['Stocks',[['AAPL','Apple',2],['TSLA','Tesla',2],['NVDA','Nvidia',2],['MSFT','Microsoft',2]]]],
 DP={},NM={};GR.forEach(function(g){g[1].forEach(function(s){DP[s[0]]=s[2];NM[s[0]]=s[1]})});
 var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:false,trm:'pct',trv:0.05,fvg:true,sgb:SIG_THR,spk:0.2,pl:true,plh:4,plrr:2,zp:true,zh:true,zf:true,zr:true,zl:true,zs:true,lb:'24h',pap:true};
-var C={};try{C=JSON.parse(localStorage.gdC2||'{}')||{}}catch(e){}for(var k in DEF)if(C[k]===undefined)C[k]=DEF[k];
+for(var k in SCALP)DEF[k]=SCALP[k];DEF.sv=SV;
+var C={},C0=null;try{C=JSON.parse(localStorage.gdC2||'{}')||{}}catch(e){}C0=C.sv;C=migrateC(C);for(var k in DEF)if(C[k]===undefined)C[k]=DEF[k];if(C0!==SV)try{localStorage.gdC2=JSON.stringify(C)}catch(e){}
 function svC(){try{localStorage.gdC2=JSON.stringify(C)}catch(e){}}
 var SYM=localStorage.gdS2;if(!DP[SYM])SYM='XAUUSD';
 var AR=null,LV=[],LVsrc='',FV=[],H=[],prev=null,atr=null,bars1=[],lastQ=null,closed=false;
@@ -234,7 +238,7 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  $('st').textContent=closed?'· market closed':'· live';
  $('hl').textContent=f(q.high)+' / '+f(q.low);
  var b2=at(120000),p2=b2?(m/b2[1]-1)*100:0,SS=sigScore(H,now,m);LS=SS.score;SG=sigStep(SG,LS,C.sgb);var s=SG.s;
- $('sig').className='badge '+s;$('sig').textContent=s;var ST=sigStrength(s,LS,m30Move(bars1,m));strOut(ST);sgShow(s,SS,ST);$('m10').innerHTML='<span class="'+(LS>=0?'up':'dn')+'">'+(LS>=0?'+':'')+LS.toFixed(2)+'</span><div class="mu">score · ±'+C.sgb+'</div>';partsOut(SS.parts);
+ $('sig').className='badge '+s;$('sig').textContent=s;var ST=sigStrength(s,LS,m15Move(bars1,m));strOut(ST);sgShow(s,SS,ST);$('m10').innerHTML='<span class="'+(LS>=0?'up':'dn')+'">'+(LS>=0?'+':'')+LS.toFixed(2)+'</span><div class="mu">score · ±'+C.sgb+'</div>';partsOut(SS.parts);
  var k=$('spk');
  if(Math.abs(p2)>=C.spk){k.style.display='block';k.className='spike '+(p2>0?'BUY':'SELL');k.textContent=(p2>0?'▲ SPIKE UP ':'▼ SPIKE DOWN ')+p2.toFixed(2)+'% / 2 min'}else k.style.display='none';var A=$('arr');if(Math.abs(p2)>=C.spk){A.textContent=p2>0?'▲':'▼';A.className=p2>0?'arr-up':'arr-dn'}else{A.textContent='';A.className=''}
  var sd=slD(m),mdn={pct:C.slv+'%',atr:C.slv+'×ATR',pts:C.slv+' pts'}[C.slm];$('atl').textContent='Stop distance ('+mdn+')';
@@ -243,10 +247,10 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  $('lv').innerHTML=LV.map(function(l,i){return '<div class="lv'+(i==ni?' near':'')+'"><span>'+l[0]+' '+f(l[1])+(i==ni?' ← nearest':'')+'</span><span class="mu">'+(l[1]-m>=0?'+':'')+f(l[1]-m)+'</span></div>'}).join('');
  fvr(m);try{arr()}catch(e){}pend(m);pos();try{planTick(m)}catch(e){}try{pnOut()}catch(e){}try{draw()}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
 var ALb=false,ALagain=false;
-async function aroonLoad(){if(ALb){ALagain=true;return}ALb=true;var sy=SYM;try{var r=await Promise.all(['5m','1h'].map(function(iv){return j(API()+'/ohlc?interval='+iv+'&limit=40').then(function(d){return aroon(d.bars.slice().reverse(),14)}).catch(function(){return null})}));if(sy==SYM){AR={m5:r[0],h1:r[1]};arr()}}catch(e){}ALb=false;if(ALagain){ALagain=false;if(sy!=SYM)aroonLoad()}}
-function aroonRowOut(){var e=$('arow');if(!e)return;var r=aroonRow(AR);e.innerHTML='<b>Aroon</b>'+[['5m',r.m5],['1h',r.h1]].map(function(x){var g=x[1],na=g.k=='na';return '<span class="ag"><i>'+x[0]+'</i> <span class="'+(na?'mu':'up')+'">▲'+g.u+'</span> <span class="'+(na?'mu':'dn')+'">▼'+g.d+'</span> <em class="'+g.k+'">'+g.tag+'</em></span>'}).join('')}
+async function aroonLoad(){if(ALb){ALagain=true;return}ALb=true;var sy=SYM;try{var r=await Promise.all(['1m','5m','1h'].map(function(iv){return j(API()+'/ohlc?interval='+iv+'&limit=40').then(function(d){return aroon(d.bars.slice().reverse(),14)}).catch(function(){return null})}));if(sy==SYM){AR={m1:r[0],m5:r[1],h1:r[2]};arr()}}catch(e){}ALb=false;if(ALagain){ALagain=false;if(sy!=SYM)aroonLoad()}}
+function aroonRowOut(){var e=$('arow');if(!e)return;var r=aroonRow(AR);e.innerHTML='<b>Aroon</b>'+[['1m',r.m1],['5m',r.m5],['1h',r.h1]].map(function(x){var g=x[1],na=g.k=='na';return '<span class="ag"><i>'+x[0]+'</i> <span class="'+(na?'mu':'up')+'">▲'+g.u+'</span> <span class="'+(na?'mu':'dn')+'">▼'+g.d+'</span> <em class="'+g.k+'">'+g.tag+'</em></span>'}).join('')}
 function arr(){aroonRowOut();var c=$('arc');if(!AR){c.style.display='none';return}c.style.display='block';
- $('arl').innerHTML=[['5-minute',AR.m5],['1-hour',AR.h1]].map(function(r){var a=r[1];if(!a)return '<div class="lv"><span>'+r[0]+'</span><span class="mu">not enough data yet</span></div>';var l=aroonLabel(a.up,a.down);
+ $('arl').innerHTML=[['1-minute',AR.m1],['5-minute',AR.m5],['1-hour',AR.h1]].map(function(r){var a=r[1];if(!a)return '<div class="lv"><span>'+r[0]+'</span><span class="mu">not enough data yet</span></div>';var l=aroonLabel(a.up,a.down);
   return '<div class="ar"><div class="ah"><b>'+r[0]+'</b><span class="up">Up '+Math.round(a.up)+'</span><span class="dn">Down '+Math.round(a.down)+'</span></div><div class="at '+l.k+'">'+l.t+'</div></div>'}).join('')}
 function fvr(m){var w=$('fvw'),c=$('fvc');if(!C.fvg){w.style.display='none';c.style.display='none';return}
  var v=FV.filter(function(g){return g.t>0?m>g.lo:m<g.hi}).map(function(g){g.d=(m>=g.lo&&m<=g.hi)?0:Math.min(Math.abs(m-g.lo),Math.abs(m-g.hi));return g}).sort(function(a,b){return a.d-b.d}).slice(0,2);
@@ -460,8 +464,8 @@ $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp
 $('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset the AUTO paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),'a');rhist();tick()}});
 $('hsb').addEventListener('click',function(e){var d=e.target.dataset||{};if(d.hf){HF=d.hf;try{localStorage.gdHF2=HF}catch(x){}rhist();return}if(d.rs&&USER){if(confirm('Reset the '+(d.rs=='a'?'AUTO':'MANUAL')+' paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),d.rs);rhist();tick()}return}if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
 function partsOut(P){var e=$('parts');if(!e)return;var nm={30000:'30s',60000:'1m',120000:'2m',300000:'5m',600000:'10m'};e.innerHTML=P?P.map(function(x){var c=x.p>0?'up':x.p<0?'dn':'mu';return '<span class="'+c+'">'+nm[x.ms]+' '+(x.p>0?'▲':x.p<0?'▼':'–')+Math.abs(x.p).toFixed(3)+'</span>'}).join(''):''}
-function strOut(ST){var e=$('str');if(!e)return;e.innerHTML=!ST.k?'':(ST.k=='STRONG'?'<span class="up">💪 STRONG (30m trend agrees)</span>':'<span class="WAITc">〰 WEAK</span>')+(ST.m30==null?'':' <span class="mu">· 30m '+(ST.m30>=0?'+':'')+ST.m30.toFixed(2)+'%</span>')}
-function sgShow(s,sc,st){SIG=sigInfo(s,sc,TR,st);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
+function strOut(ST){var e=$('str'),ag=ST.k?aroonAgree(SG.s,aroonSeg(AR&&AR.m1)):'';if(!e)return;e.innerHTML=!ST.k?'':(ST.k=='STRONG'?'<span class="up">💪 STRONG (15m trend agrees)</span>':'<span class="WAITc">〰 WEAK</span>')+(ST.m15==null?'':' <span class="mu">· 15m '+(ST.m15>=0?'+':'')+ST.m15.toFixed(2)+'%</span>')+(ag=='with'||ag=='against'?' <span class="'+(ag=='with'?'up':'dn')+'">· '+ag+' 1m Aroon</span>':'')}
+function sgShow(s,sc,st){SIG=sigInfo(s,sc,TR,st,aroonSeg(AR&&AR.m1));$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
 function boot(){aroonRowOut();pnBuild();sel();pend(null);candles().then(tick);aroonLoad();setInterval(tick,1500);setInterval(candles,30000);setInterval(aroonLoad,15000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
 var G_KEY='gdAuth',FAILS=0,LOCKT=0;
