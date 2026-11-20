@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,sigStep,sigRaw,relabelStr,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -38,8 +38,8 @@ t('oversized stored array is trimmed on read',function(){var st=mem(),a=[];for(v
 t('corrupt storage is safe',function(){var st=mem();st.setItem('gdH2_x','{bad');assert.deepStrictEqual(L.histGet(st,'x'),[])});
 // strategy labels
 t('zone → strategy',function(){assert.strictEqual(L.zoneStrat('S1 pivot'),'Pivot bounce');assert.strictEqual(L.zoneStrat('P pivot'),'Pivot bounce');assert.strictEqual(L.zoneStrat('Day high'),'Day high/low reject');assert.strictEqual(L.zoneStrat('Day low'),'Day high/low reject');assert.strictEqual(L.zoneStrat('Bull FVG'),'FVG retest');assert.strictEqual(L.zoneStrat('Bear FVG'),'FVG retest');assert.strictEqual(L.zoneStrat('Round 4,000.00'),'Round-number reject')});
-t('signal strategy label + reason',function(){var up={'1h':{d:1},'4h':{d:1}},a=L.sigInfo('BUY',0.031,0.02,up);assert.strictEqual(a.name,'Momentum (10-min move)');assert(/\+0\.031% in 10 min/.test(a.why)&&/with 1H\/4H trend/.test(a.why));
- assert(/against 1H\/4H trend/.test(L.sigInfo('SELL',-0.03,0.02,up).why));assert(!/trend/.test(L.sigInfo('BUY',0.03,0.02,{'1h':{d:1},'4h':{d:-1}}).why));var w=L.sigInfo('WAIT',0.005,0.02,up);assert.strictEqual(w.name,'No signal');assert(/under the ±0\.02%/.test(w.why))});
+t('signal strategy label + reason',function(){var up={'1h':{d:1},'4h':{d:1}},a=L.sigInfo('BUY',0.031,0.009,up);assert.strictEqual(a.name,'Momentum (2-min move)');assert(/\+0\.031% in 2 min/.test(a.why)&&/with 1H\/4H trend/.test(a.why));
+ assert(/against 1H\/4H trend/.test(L.sigInfo('SELL',-0.03,0.009,up).why));assert(!/trend/.test(L.sigInfo('BUY',0.03,0.009,{'1h':{d:1},'4h':{d:-1}}).why));var w=L.sigInfo('WAIT',0.005,0.009,up);assert.strictEqual(w.name,'No signal');assert(/under the ±0\.009%/.test(w.why))});
 t('plan reason is one line, mentions trend + zone',function(){var w=L.planWhy(1,'S1 pivot',4800,2.1,function(x){return x.toFixed(2)});assert(!/\n/.test(w));assert(/Trend up on 1H\+4H/.test(w)&&/S1 pivot 4800\.00/.test(w)&&/R:R 1:2\.1/.test(w))});
 // ---- past P/L log ----
 function rowE(o){var b={sym:'XAUUSD',d:1,lot:0.01,ent:3500,ext:3510,xau:true,dp:2,str:'Manual',ot:Date.UTC(2026,10,20,1,0),t:Date.UTC(2026,10,20,3,30)};for(var k in o)b[k]=o[k];return L.closedRow(b)}
@@ -155,5 +155,22 @@ t('aroon label boundaries: 70/30 are NOT enough (strict)',function(){
  assert.strictEqual(L.aroonLabel(29,71).k,'dn');assert.strictEqual(L.aroonLabel(29.99,70.01).k,'dn');
  assert.strictEqual(L.aroonLabel(100,100).k,'none');assert.strictEqual(L.aroonLabel(0,0).k,'none')});
 t('aroon note says confirm, not predict',function(){assert(/confirms a trend/i.test(L.aroonNote)&&/can.t predict/i.test(L.aroonNote)&&!/biquote/i.test(L.aroonNote))});
+
+// 2-min momentum signal
+function run(ps,thr,st){st=st||{s:'WAIT',c:null,n:0};var out=[];ps.forEach(function(p){st=L.sigStep(st,p,thr==null?L.SIG_THR:thr);out.push(st.s)});return out}
+t('threshold scaled by sqrt(2/10): 0.02% → 0.009%',function(){assert.strictEqual(L.SIG_THR,Math.round(0.02*Math.sqrt(2/10)*1000)/1000);assert.strictEqual(L.SIG_THR,0.009);assert.strictEqual(L.SIG_CONF,3)});
+t('sigRaw: ±thr triggers (inclusive), below is WAIT',function(){assert.strictEqual(L.sigRaw(0.009,0.009,'WAIT'),'BUY');assert.strictEqual(L.sigRaw(-0.009,0.009,'WAIT'),'SELL');assert.strictEqual(L.sigRaw(0.00899,0.009,'WAIT'),'WAIT');assert.strictEqual(L.sigRaw(-0.00899,0.009,'WAIT'),'WAIT');assert.strictEqual(L.sigRaw(0,0.009,'WAIT'),'WAIT')});
+t('signal needs 3 ticks in a row to turn BUY / SELL',function(){assert.deepStrictEqual(run([0.02,0.02,0.02]),['WAIT','WAIT','BUY']);assert.deepStrictEqual(run([-0.02,-0.02,-0.02,-0.02]),['WAIT','WAIT','SELL','SELL'])});
+t('one- or two-tick blip does not flip the signal',function(){assert.deepStrictEqual(run([0.05,0,0.05,0.05,0,0.05]),['WAIT','WAIT','WAIT','WAIT','WAIT','WAIT']);assert.deepStrictEqual(run([0.05,0.05,0,0,0]),['WAIT','WAIT','WAIT','WAIT','WAIT'])});
+t('alternating noise around the trigger never flips',function(){var p=[];for(var i=0;i<40;i++)p.push(i%2?0.012:-0.012);assert(run(p).every(function(x){return x=='WAIT'}))});
+t('hysteresis: BUY holds above half the trigger, drops after 3 ticks below it',function(){
+ assert.deepStrictEqual(run([0.02,0.02,0.02,0.006,0.004,0.004,0.004]),['WAIT','WAIT','BUY','BUY','BUY','BUY','WAIT'])});
+t('hysteresis: dips between half and full trigger keep BUY indefinitely',function(){var p=[0.02,0.02,0.02];for(var i=0;i<20;i++)p.push(0.0055);var r=run(p);assert.strictEqual(r[2],'BUY');assert(r.slice(2).every(function(x){return x=='BUY'}))});
+t('BUY → SELL needs 3 straight SELL ticks',function(){var st={s:'BUY',c:null,n:0};assert.deepStrictEqual(run([-0.02,-0.02,-0.02],null,st),['BUY','BUY','SELL']);st={s:'BUY',c:null,n:0};assert.deepStrictEqual(run([-0.02,-0.02,0.02,-0.02,-0.02],null,st),['BUY','BUY','BUY','BUY','BUY'])});
+t('SELL holds symmetric, and exits to WAIT after 3 ticks inside the band',function(){var st={s:'SELL',c:null,n:0};assert.deepStrictEqual(run([-0.0055,-0.0055,-0.0055],null,st),['SELL','SELL','SELL']);st={s:'SELL',c:null,n:0};assert.deepStrictEqual(run([-0.004,-0.004,-0.004],null,st),['SELL','SELL','WAIT'])});
+t('sigStep does not mutate its input',function(){var st={s:'WAIT',c:null,n:0},a=L.sigStep(st,0.05,0.009);assert.deepStrictEqual(st,{s:'WAIT',c:null,n:0});assert.notStrictEqual(a,st)});
+t('relabel: old 10-min strategy name becomes 2-min',function(){assert.strictEqual(L.relabelStr('Momentum (10-min move)'),'Momentum (2-min move)');assert.strictEqual(L.relabelStr('FVG retest'),'FVG retest');assert.strictEqual(L.relabelStr(undefined),undefined)});
+t('history read relabels old momentum entries',function(){var st=mem();st.setItem('gdH2_u',JSON.stringify([{str:'Momentum (10-min move)'},{str:'Pivot bounce'}]));var h=L.histGet(st,'u');assert.strictEqual(h[0].str,'Momentum (2-min move)');assert.strictEqual(h[1].str,'Pivot bounce')});
+t('no 10-min momentum wording left in the page; no biquote',function(){assert(!/10-min|10 min|Momentum \(10/i.test(src.replace(/function relabelStr[^\n]*/,'')));assert(!/biquote/i.test(src));assert(/Momentum \(2-min move\)/.test(src))});
 authTests().then(function(){console.log(n+' tests passed')});
 

@@ -97,15 +97,19 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#spk,body.inpos #top>
 var HCAP=30;
 function hKey(u){return 'gdH2_'+String(u||'').toLowerCase()}
 function pushHist(a,it,cap){a=(a||[]).slice();a.unshift(it);cap=cap||HCAP;if(a.length>cap)a.length=cap;return a}
-function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP):[]}catch(e){return[]}}
+function relabelStr(x){return x==='Momentum (10-min move)'?'Momentum (2-min move)':x}
+function histGet(st,u){try{var a=JSON.parse(st.getItem(hKey(u))||'[]');return Array.isArray(a)?a.slice(0,HCAP).map(function(r){if(r&&r.str)r.str=relabelStr(r.str);return r}):[]}catch(e){return[]}}
 function histAdd(st,u,it){if(!u)return[];var a=pushHist(histGet(st,u),it,HCAP);try{st.setItem(hKey(u),JSON.stringify(a))}catch(e){}return a}
 function zoneStrat(n){n=String(n||'');if(/FVG/.test(n))return 'FVG retest';if(/Swing/.test(n))return 'Swing high/low reject';if(/Range (high|low)/.test(n))return 'Range edge reject';if(/ pivot/.test(n))return 'Pivot bounce';if(/Day (high|low)/.test(n))return 'Day high/low reject';if(/Round/.test(n))return 'Round-number reject';return 'Zone pullback'}
 function zoneWhy(n){var s=zoneStrat(n);return s=='Pivot bounce'?'pullback to previous-day pivot':s=='Day high/low reject'?"pullback to today's high/low":s=='FVG retest'?'pullback into an unfilled gap (FVG)':s=='Round-number reject'?'pullback to a round number':s=='Swing high/low reject'?'pullback to a recent swing level':s=='Range edge reject'?'pullback to the lookback range edge':'pullback to a zone'}
 function planWhy(d,zn,ent,rr,fx,info){info=info||{};return 'Trend '+(d>0?'up':'down')+' on 1H+4H (EMA20/50); '+(d>0?'buy':'sell')+' limit at '+zn+' '+fx(ent)+' ('+zoneWhy(zn)+')'+(info.n>1?'; '+info.n+' zone types line up':'')+(info.tc>0?'; '+info.tc+' past touch'+(info.tc>1?'es':''):'')+', R:R 1:'+rr.toFixed(1)}
-function sigInfo(s,p10,thr,TR){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,mv=(p10>=0?'+':'')+p10.toFixed(3)+'% in 10 min';
+var SIG_THR=0.009,SIG_CONF=3;/* old 0.02% trigger x sqrt(2/10) = 0.009% on the 2-min move; a change must repeat SIG_CONF ticks; a held signal only drops below half the trigger */
+function sigRaw(p,thr,cur){var b=thr/2;if(cur=='BUY'&&p>=b)return 'BUY';if(cur=='SELL'&&p<=-b)return 'SELL';return p>=thr?'BUY':p<=-thr?'SELL':'WAIT'}
+function sigStep(st,p,thr){var r=sigRaw(p,thr,st.s);if(r==st.s)return{s:st.s,c:null,n:0};var n=st.c==r?st.n+1:1;return n>=SIG_CONF?{s:r,c:null,n:0}:{s:st.s,c:r,n:n}}
+function sigInfo(s,p10,thr,TR){var h1=TR&&TR['1h'],h4=TR&&TR['4h'],td=h1&&h4&&h1.d==h4.d?h1.d:0,mv=(p10>=0?'+':'')+p10.toFixed(3)+'% in 2 min';
  if(s=='WAIT')return{s:s,name:'No signal',why:'Move '+mv+' is under the ±'+thr+'% trigger'};
  var t=td?((s=='BUY')==(td>0)?' · with 1H/4H trend':' · against 1H/4H trend'):'';
- return{s:s,name:'Momentum (10-min move)',why:'Price '+mv+' (trigger ±'+thr+'%)'+t}}
+ return{s:s,name:'Momentum (2-min move)',why:'Price '+mv+' (trigger ±'+thr+'%)'+t}}
 var OT=[['mb','Market Buy',1,0],['ms','Market Sell',-1,0],['bl','Buy Limit',1,-10],['sl','Sell Limit',-1,10],['bs','Buy Stop',1,10],['ss','Sell Stop',-1,-10]];
 function otOf(k){for(var i=0;i<OT.length;i++)if(OT[i][0]==k)return OT[i];return OT[0]}
 function rnd(x,dp){return +(+x).toFixed(dp)}
@@ -171,7 +175,7 @@ GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]
 ['Indices & Oil',[['US30','Dow 30',2],['USTEC','Nasdaq 100',2],['US500','S&P 500',2],['USOIL','US Oil',3]]],
 ['Stocks',[['AAPL','Apple',2],['TSLA','Tesla',2],['NVDA','Nvidia',2],['MSFT','Microsoft',2]]]],
 DP={},NM={};GR.forEach(function(g){g[1].forEach(function(s){DP[s[0]]=s[2];NM[s[0]]=s[1]})});
-var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:false,trm:'pct',trv:0.05,fvg:true,sig:0.02,spk:0.2,pl:true,plh:4,plrr:2,zp:true,zh:true,zf:true,zr:true,zl:true,zs:true,lb:'24h',pap:true};
+var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:false,trm:'pct',trv:0.05,fvg:true,sg2:SIG_THR,spk:0.2,pl:true,plh:4,plrr:2,zp:true,zh:true,zf:true,zr:true,zl:true,zs:true,lb:'24h',pap:true};
 var C={};try{C=JSON.parse(localStorage.gdC2||'{}')||{}}catch(e){}for(var k in DEF)if(C[k]===undefined)C[k]=DEF[k];
 function svC(){try{localStorage.gdC2=JSON.stringify(C)}catch(e){}}
 var SYM=localStorage.gdS2;if(!DP[SYM])SYM='XAUUSD';
@@ -182,7 +186,7 @@ function API(){return BASE+'/'+SYM}
 function at(ms){var t=Date.now()-ms,b=null;for(var i=0;i<H.length;i++){if(H[i][0]<=t)b=H[i];else break}return b}
 async function j(u){var r=await fetch(u,{cache:'no-store'});return r.json()}
 function ld(k){try{return JSON.parse(localStorage[k]||'{}')||{}}catch(e){return{}}}
-var EA=ld('gdE2'),PA=ld('gdP2');
+var EA=ld('gdE2'),PA=ld('gdP2');for(var k0 in EA)(EA[k0]||[]).forEach(function(x){if(x&&x.str)x.str=relabelStr(x.str)});
 function E(){return EA[SYM]||(EA[SYM]=[])}function P(){return PA[SYM]||(PA[SYM]=[])}
 function sv(){try{localStorage.gdE2=JSON.stringify(EA);localStorage.gdP2=JSON.stringify(PA)}catch(e){}}
 function sel(){var h='';GR.forEach(function(g){h+='<optgroup label="'+g[0]+'">';g[1].forEach(function(s){var n=(EA[s[0]]||[]).length+(PA[s[0]]||[]).length;h+='<option value="'+s[0]+'"'+(s[0]==SYM?' selected':'')+'>'+s[0]+' · '+s[1]+(n?' ●'+n:'')+'</option>'});h+='</optgroup>'});$('sy').innerHTML=h}
@@ -219,9 +223,9 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  $('chg').innerHTML='<span class="'+(q.dayDiffPercent>=0?'up':'dn')+'">'+(q.dayDiffPercent>=0?'+':'')+q.dayDiffPercent.toFixed(2)+'% today</span> · bid '+f(q.bid)+' / ask '+f(q.ask);
  $('st').textContent=closed?'· market closed':'· live';
  $('hl').textContent=f(q.high)+' / '+f(q.low);
- var b10=at(600000),p10=b10?(m/b10[1]-1)*100:0,s=p10>=C.sig?'BUY':p10<=-C.sig?'SELL':'WAIT';
- $('sig').className='badge '+s;$('sig').textContent=s;sgShow(s,p10);$('m10').innerHTML='<span class="'+(p10>=0?'up':'dn')+'">'+(p10>=0?'+':'')+p10.toFixed(3)+'%</span><div class="mu">10 min · ±'+C.sig+'%</div>';
- var b2=at(120000),p2=b2?(m/b2[1]-1)*100:0,k=$('spk');
+ var b2=at(120000),p2=b2?(m/b2[1]-1)*100:0;SG=sigStep(SG,p2,C.sg2);var s=SG.s;
+ $('sig').className='badge '+s;$('sig').textContent=s;sgShow(s,p2);$('m10').innerHTML='<span class="'+(p2>=0?'up':'dn')+'">'+(p2>=0?'+':'')+p2.toFixed(3)+'%</span><div class="mu">2 min · ±'+C.sg2+'%</div>';
+ var k=$('spk');
  if(Math.abs(p2)>=C.spk){k.style.display='block';k.className='spike '+(p2>0?'BUY':'SELL');k.textContent=(p2>0?'▲ SPIKE UP ':'▼ SPIKE DOWN ')+p2.toFixed(2)+'% / 2 min'}else k.style.display='none';var A=$('arr');if(Math.abs(p2)>=C.spk){A.textContent=p2>0?'▲':'▼';A.className=p2>0?'arr-up':'arr-dn'}else{A.textContent='';A.className=''}
  var sd=slD(m),mdn={pct:C.slv+'%',atr:C.slv+'×ATR',pts:C.slv+' pts'}[C.slm];$('atl').textContent='Stop distance ('+mdn+')';
  $('atr').innerHTML=f(sd)+'<div class="mu">long '+f(m-sd)+' · short '+f(m+sd)+'</div>';
@@ -263,7 +267,7 @@ function pos(){var b=$('pos'),L=E();document.body.classList.toggle('inpos',L.len
  if(!L.length||prev==null){b.style.display='none';return}
  var m=prev,b2=at(120000),mv2=b2?(m/b2[1]-1)*100:0,ch=false;b.style.display='block';
  b.innerHTML=L.map(function(x,i){var d=x.d,v=lvls(x),pt=(m-x.p)*d;if(d*(m-x.b)>0){x.b=m;ch=true}
-  var w='',wc='mu';if(d*(m-v.se)<=0){w=v.kd=='tr'?'🔒 TRAIL STOP':v.kd=='be'?'🔒 BREAKEVEN':'⛔ STOP LOSS';wc='dn'}else if(d*(m-v.t2)>=0){w='✅ TAKE ALL (TP2)';wc='up'}else if(d*(m-v.t1)>=0){w='💰 TAKE PROFIT (TP1)';wc='up'}else if(d*mv2<=-C.sig){w='↘ AGAINST YOU';wc='dn'}else if(pt>0&&((d>0&&$('sig').textContent==='SELL')||(d<0&&$('sig').textContent==='BUY'))){w='⚠ SECURE PROFIT';wc='WAITc'}else if(d*mv2>=C.sig){w='↗ YOUR WAY';wc='up'}else w='→ Flat';
+  var w='',wc='mu';if(d*(m-v.se)<=0){w=v.kd=='tr'?'🔒 TRAIL STOP':v.kd=='be'?'🔒 BREAKEVEN':'⛔ STOP LOSS';wc='dn'}else if(d*(m-v.t2)>=0){w='✅ TAKE ALL (TP2)';wc='up'}else if(d*(m-v.t1)>=0){w='💰 TAKE PROFIT (TP1)';wc='up'}else if(d*mv2<=-C.sg2){w='↘ AGAINST YOU';wc='dn'}else if(pt>0&&((d>0&&$('sig').textContent==='SELL')||(d<0&&$('sig').textContent==='BUY'))){w='⚠ SECURE PROFIT';wc='WAITc'}else if(d*mv2>=C.sg2){w='↗ YOUR WAY';wc='up'}else w='→ Flat';
   return '<div class="ent"><div class="el"><b class="'+(d>0?'up':'dn')+'">'+(d>0?'BUY':'SELL')+' #'+(i+1)+'</b> '+SYM+' @ '+f(x.p)+(x.str?'<div class="mu">'+x.str+'</div>':'')+'<div class="mu">TP1 '+f(v.t1)+' · TP2 '+f(v.t2)+' · SL '+f(v.se)+(v.kd!='sl'?' ('+(v.kd=='be'?'BE':'trail')+')':'')+'</div></div><div class="ew '+wc+(w.charAt(0)==='→'?'':' bl')+'">'+w+'</div><div class="en '+(pt>=0?'up':'dn')+'">'+(pt>=0?'+':'')+f(pt)+'<div class="mu">'+(pt>=0?'+':'')+(pt/x.p*100).toFixed(3)+'%</div></div><button class="ex" data-x="'+i+'">✕</button></div>'}).join('');
  if(ch)sv()}
 // trade plan (phase 1)
@@ -360,7 +364,7 @@ function rcfg(){$('cfg').firstChild.innerHTML='<h2>⚙ Strategy <button id="cx">
  '<h3>Pending orders (alerts)</h3><div class="mu">'+SYM+' now '+(prev!=null?f(prev):'—')+'</div><div class="fr"><select id="pk" style="width:auto;flex:1"><option value="BS">Buy Stop</option><option value="BL">Buy Limit</option><option value="SS">Sell Stop</option><option value="SL">Sell Limit</option></select><input id="pv" type="number" inputmode="decimal" step="any" placeholder="price" style="width:110px"><button id="pa">Add</button></div><div id="pm" class="mu"></div>'+
  '<h3>Trade plans</h3><div class="fr"><span>Auto trade plans</span>'+ck('pl')+'</div><div class="fr"><span>Lookback (zones and plan count)</span>'+so('lb',[['24h','24 hours'],['7d','7 days'],['30d','30 days']])+'</div><div class="fr"><span>Plan valid (hours)</span>'+nr('plh','any',0.5)+'</div><div class="fr"><span>Min R:R (1 : x)</span>'+nr('plrr','any',1)+'</div><div class="fr"><span>Zones: pivots</span>'+ck('zp')+'</div><div class="fr"><span>Zones: day high/low</span>'+ck('zh')+'</div><div class="fr"><span>Zones: FVGs</span>'+ck('zf')+'</div><div class="fr"><span>Zones: round numbers</span>'+ck('zr')+'</div><div class="fr"><span>Zones: lookback range high/low</span>'+ck('zl')+'</div><div class="fr"><span>Zones: swing highs/lows</span>'+ck('zs')+'</div><div class="fr"><span>PAPER / demo auto-trade</span>'+ck('pap')+'</div><div class="mu">Plans open a paper trade when price touches the entry. No broker, no real money.</div>'+
  '<h3>FVG detector</h3><div class="fr"><span>Show fair value gaps (5m)</span>'+ck('fvg')+'</div>'+
- '<h3>Signal sensitivity</h3><div class="fr"><span>10-min signal %</span>'+nr('sig','any',0)+'</div><div class="fr"><span>Spike % (2 min)</span>'+nr('spk','any',0)+'</div>'+
+ '<h3>Signal sensitivity</h3><div class="fr"><span>2-min signal %</span>'+nr('sg2','any',0)+'</div><div class="fr"><span>Spike % (2 min)</span>'+nr('spk','any',0)+'</div>'+
  '<div class="fr" style="margin-top:16px"><button id="cr">Reset defaults</button></div>'}
 function opc(){rcfg();$('cfg').style.display='block'}
 tap($('gb'),opc);
@@ -381,10 +385,10 @@ $('cfg').addEventListener('change',function(e){var t=e.target,k=t.dataset.k;if(!
  if(k=='lb'){LBD={};var L0=PLs();for(var q=L0.length-1;q>=0;q--)if(!L0[q].fl&&!L0[q].cl)L0.splice(q,1);svP();note('Lookback '+v+': plans refreshed');candles().then(tick)}
  svC();if(t.dataset.m)rcfg();if(prev!=null){tick()}});
 $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS2=SYM}catch(e){}
- H=[];prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};LBD={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
+ H=[];SG={s:'WAIT',c:null,n:0};prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};LBD={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
  $('lv').innerHTML='';$('fvc').style.display='none';AR=null;$('arc').style.display='none';$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
 /* ---- history / signal / planner UI ---- */
-var USER=null,booted=false,SIG=null;
+var USER=null,booted=false,SIG=null,SG={s:'WAIT',c:null,n:0};
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}
 function usd(v){return (v>=0?'+$':'-$')+Math.abs(v).toFixed(2)}
 var HF=localStorage.gdHF2||'all';
@@ -442,7 +446,7 @@ $('tpb').addEventListener('click',function(e){var t=e.target;if(t.className=='cp
  else if(t.id=='pnSave'&&PNR&&PNR.ok){var r=PNR;pushH({k:'calc',ty:r.name.toUpperCase(),d:r.d,ent:r.ent,sl:r.sl,tp:r.tp,lot:PN.lot,risk:r.risk,str:'Manual planner',why:'Saved from the trade planner'+(r.xau?'':' (price levels only)')});t.textContent='Saved ✓';setTimeout(function(){t.textContent='Save to history'},1200)}});
 $('plc').addEventListener('click',function(e){if(e.target.id=='pbr'&&USER&&confirm('Reset the AUTO paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),'a');rhist();tick()}});
 $('hsb').addEventListener('click',function(e){var d=e.target.dataset||{};if(d.hf){HF=d.hf;try{localStorage.gdHF2=HF}catch(x){}rhist();return}if(d.rs&&USER){if(confirm('Reset the '+(d.rs=='a'?'AUTO':'MANUAL')+' paper balance to your planner account ($'+acct0()+')?')){balReset(localStorage,USER,acct0(),d.rs);rhist();tick()}return}if(e.target.id=='hcl'&&USER&&confirm('Clear all history?')){try{localStorage.removeItem(hKey(USER))}catch(x){}rhist()}});
-function sgShow(s,p10){SIG=sigInfo(s,p10,C.sig,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
+function sgShow(s,p2){SIG=sigInfo(s,p2,C.sg2,TR);$('sgs').innerHTML='<b>'+SIG.name+'</b> · '+SIG.why}
 function boot(){pnBuild();sel();pend(null);candles().then(tick);setInterval(tick,1500);setInterval(candles,30000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
 var G_KEY='gdAuth',FAILS=0,LOCKT=0;
