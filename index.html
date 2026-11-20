@@ -71,6 +71,7 @@ body.inpos #pxrow #ch{height:46px;flex:1;width:auto}
 body.inpos #top>#sig{grid-column:1}body.inpos #top>.btns{grid-column:2;margin-top:4px}
 body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#spk,body.inpos #top>#fvw,body.inpos #top>#str{grid-column:1/-1}
 }
+.ar{padding:8px 0;border-top:1px solid #1f2a37}.ar:first-of-type{border-top:0}.ah{display:flex;gap:14px;align-items:baseline;font-size:15px}.ah b{flex:1;font-size:14px}.at{margin-top:4px;font-weight:700;font-size:14px;color:#9aa4b2}.at.up{color:#2fd27a}.at.dn{color:#ff5b5b}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div id="top"><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
@@ -82,6 +83,7 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#spk,body.inpos #top>
 <div id="sgs"></div>
 <div class="card" style="margin-top:12px"><div class="mu" id="lvt">Key levels</div><div id="lv"></div></div>
 <div class="card" id="fvc" style="margin-top:12px;display:none"><div class="mu">Open FVG (5m)</div><div id="fvl"></div></div>
+<div class="card" id="arc" style="margin-top:12px;display:none"><div class="mu">Aroon (14) · trend check</div><div id="arl"></div><div class="mu" style="font-size:12px;margin-top:8px">Aroon confirms a trend that's already running, but it can't predict sudden spikes.</div></div>
 <div id="trade"><div id="pend"></div><div id="pos" style="display:none"></div></div>
 <div class="card" id="plc" style="margin-top:12px;display:none"></div>
 <details class="card" id="tpn" style="margin-top:12px"><summary>🧮 Trade planner (MT5)</summary><div id="tpb"></div></details>
@@ -158,6 +160,9 @@ function balKey(u,kind){return (kind=='m'?'gdPM_':'gdPA_')+String(u||'').toLower
 function balGet(st,u,def,kind){try{var o=JSON.parse(st.getItem(balKey(u,kind))||'null');if(o&&typeof o.bal=='number'){o.w=o.w||0;o.l=o.l||0;return o}}catch(e){}return{bal:+def||0,start:+def||0,w:0,l:0}}
 function balAdd(st,u,pl,def,kind){var o=balGet(st,u,def,kind);if(pl==null||isNaN(pl))return o;o.bal=+(o.bal+pl).toFixed(2);if(pl>0)o.w++;else if(pl<0)o.l++;try{st.setItem(balKey(u,kind),JSON.stringify(o))}catch(e){}return o}
 function balReset(st,u,start,kind){var v=+(+start||0).toFixed(2),o={bal:v,start:v,w:0,l:0};try{st.setItem(balKey(u,kind),JSON.stringify(o))}catch(e){}return o}
+function aroon(b,n){n=n||14;if(!b||b.length<n+1)return null;var w=b.slice(-(n+1)),hi=0,lo=0;for(var i=1;i<w.length;i++){if(w[i].high>=w[hi].high)hi=i;if(w[i].low<=w[lo].low)lo=i}return{up:100*(n-(n-hi))/n,down:100*(n-(n-lo))/n}}
+function aroonLabel(u,d){if(u>70&&d<30)return{k:'up',t:'Uptrend: buyers in control'};if(d>70&&u<30)return{k:'dn',t:'Downtrend: sellers in control'};return{k:'none',t:'No clear trend: wait'}}
+var aroonNote="Aroon confirms a trend that's already running, but it can't predict sudden spikes.";
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -170,7 +175,7 @@ var DEF={slm:'pct',slv:0.05,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,mx:5,be:false,tr:f
 var C={};try{C=JSON.parse(localStorage.gdC2||'{}')||{}}catch(e){}for(var k in DEF)if(C[k]===undefined)C[k]=DEF[k];
 function svC(){try{localStorage.gdC2=JSON.stringify(C)}catch(e){}}
 var SYM=localStorage.gdS2;if(!DP[SYM])SYM='XAUUSD';
-var LV=[],LVsrc='',FV=[],H=[],prev=null,atr=null,bars1=[],lastQ=null,closed=false;
+var AR=null,LV=[],LVsrc='',FV=[],H=[],prev=null,atr=null,bars1=[],lastQ=null,closed=false;
 function $(i){return document.getElementById(i)}
 function f(x){return x.toFixed(DP[SYM])}
 function API(){return BASE+'/'+SYM}
@@ -193,6 +198,7 @@ async function candles(){var sy=SYM;try{
  FV=z.filter(function(g){for(var k=g.i+1;k<n;k++){if(g.t>0?c[k].low<=g.lo:c[k].high>=g.hi)return false}return true});
  try{var d=(await j(API()+'/ohlc?interval=1d&limit=4')).bars,pb=d.filter(function(b){return !b.isOpen})[0];if(sy!=SYM)return;
   if(pb){LV=pivots(pb.high,pb.low,pb.close);LVsrc='prev day pivots'}}catch(e){}
+ AR={m5:aroon(c,14)};try{var h1=(await j(API()+'/ohlc?interval=1h&limit=40')).bars.slice().reverse();if(sy!=SYM)return;AR.h1=aroon(h1,14)}catch(e){AR.h1=null}
  try{await tfs(sy)}catch(e){}if(sy!=SYM)return;try{await lbLoad(sy)}catch(e){}if(sy!=SYM)return;
  draw()}catch(e){}}
 function draw(){var cv=$('ch');if(!cv||!cv.clientWidth)return;var dpr=window.devicePixelRatio||1,W=Math.round(cv.clientWidth*dpr),Hh=Math.round(cv.clientHeight*dpr);if(cv.width!=W||cv.height!=Hh){cv.width=W;cv.height=Hh}
@@ -221,7 +227,10 @@ async function tick(){var sy=SYM;try{var q=await j(API());if(sy!=SYM)return;var 
  $('atr').innerHTML=f(sd)+'<div class="mu">long '+f(m-sd)+' · short '+f(m+sd)+'</div>';
  var ni=0;LV.forEach(function(l,i){if(Math.abs(l[1]-m)<Math.abs(LV[ni][1]-m))ni=i});$('lvt').textContent='Key levels ('+LVsrc+')';
  $('lv').innerHTML=LV.map(function(l,i){return '<div class="lv'+(i==ni?' near':'')+'"><span>'+l[0]+' '+f(l[1])+(i==ni?' ← nearest':'')+'</span><span class="mu">'+(l[1]-m>=0?'+':'')+f(l[1]-m)+'</span></div>'}).join('');
- fvr(m);pend(m);pos();try{planTick(m)}catch(e){}try{pnOut()}catch(e){}try{draw()}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
+ fvr(m);try{arr()}catch(e){}pend(m);pos();try{planTick(m)}catch(e){}try{pnOut()}catch(e){}try{draw()}catch(e){}}catch(e){$('st').textContent='· reconnecting'}}
+function arr(){var c=$('arc');if(!AR){c.style.display='none';return}c.style.display='block';
+ $('arl').innerHTML=[['5-minute',AR.m5],['1-hour',AR.h1]].map(function(r){var a=r[1];if(!a)return '<div class="lv"><span>'+r[0]+'</span><span class="mu">not enough data yet</span></div>';var l=aroonLabel(a.up,a.down);
+  return '<div class="ar"><div class="ah"><b>'+r[0]+'</b><span class="up">Up '+Math.round(a.up)+'</span><span class="dn">Down '+Math.round(a.down)+'</span></div><div class="at '+l.k+'">'+l.t+'</div></div>'}).join('')}
 function fvr(m){var w=$('fvw'),c=$('fvc');if(!C.fvg){w.style.display='none';c.style.display='none';return}
  var v=FV.filter(function(g){return g.t>0?m>g.lo:m<g.hi}).map(function(g){g.d=(m>=g.lo&&m<=g.hi)?0:Math.min(Math.abs(m-g.lo),Math.abs(m-g.hi));return g}).sort(function(a,b){return a.d-b.d}).slice(0,2);
  c.style.display=v.length?'block':'none';
@@ -373,7 +382,7 @@ $('cfg').addEventListener('change',function(e){var t=e.target,k=t.dataset.k;if(!
  svC();if(t.dataset.m)rcfg();if(prev!=null){tick()}});
 $('sy').addEventListener('change',function(){SYM=this.value;try{localStorage.gdS2=SYM}catch(e){}
  H=[];prev=null;atr=null;bars1=[];LV=[];FV=[];lastQ=null;TR={};LBD={};$('plc').style.display='none';$('px').textContent='—';$('chg').textContent='loading…';$('st').textContent='';$('sig').className='badge WAIT';$('sig').textContent='WAIT';
- $('lv').innerHTML='';$('fvc').style.display='none';$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
+ $('lv').innerHTML='';$('fvc').style.display='none';AR=null;$('arc').style.display='none';$('fvw').style.display='none';$('spk').style.display='none';$('arr').textContent='';pos();pend(null);candles().then(tick)});
 /* ---- history / signal / planner UI ---- */
 var USER=null,booted=false,SIG=null;
 function pushH(it){if(!USER)return;it.t=Date.now();it.sym=it.sym||SYM;histAdd(localStorage,USER,it);rhist()}

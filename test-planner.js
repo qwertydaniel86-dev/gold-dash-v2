@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
+var L=new Function(m[1]+';return{aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -135,5 +135,25 @@ async function authTests(){
  assert.strictEqual(await L.authCheck('daniel',PW),null);assert.strictEqual(await L.authCheck('',PW),null);n++;console.log('ok auth: wrong username rejected');
  assert(L.authSessOk({u:'dan',k:L.GD_AUTH.h}));assert(!L.authSessOk({u:'dan',k:'x'}));assert(!L.authSessOk({u:'dan'}));assert(!L.authSessOk(null));n++;console.log('ok auth: stored session must carry the hash');
  assert(src.split(L.GD_AUTH.name).join('').toLowerCase().indexOf(PW.toLowerCase())<0,'no plaintext in source (besides the display name)');assert(/^[0-9a-f]{32}$/.test(L.GD_AUTH.salt)&&L.GD_AUTH.it>=100000);n++;console.log('ok auth: salted PBKDF2, no plaintext in source')}
+
+// Aroon(14)
+function bars(hs,ls){return hs.map(function(h,i){return{high:h,low:ls[i]}})}
+function flat(n){var h=[],l=[];for(var i=0;i<n;i++){h.push(100);l.push(50)}return{h:h,l:l}}
+t('aroon: high on newest bar → Up 100; low 14 bars ago → Down 0',function(){var f=flat(15);f.h[14]=120;f.l[0]=40;var a=L.aroon(bars(f.h,f.l),14);assert.strictEqual(a.up,100);assert.strictEqual(a.down,0)});
+t('aroon: high 14 bars ago → Up 0; low on newest → Down 100',function(){var f=flat(15);f.h[0]=120;f.l[14]=40;var a=L.aroon(bars(f.h,f.l),14);assert.strictEqual(a.up,0);assert.strictEqual(a.down,100)});
+t('aroon: exact values for high 3 bars ago, low 7 bars ago',function(){var f=flat(15);f.h[11]=130;f.l[7]=30;var a=L.aroon(bars(f.h,f.l),14);assert.strictEqual(a.up,100*(14-3)/14);assert.strictEqual(a.down,100*(14-7)/14)});
+t('aroon: only the last 15 bars count (older extremes ignored)',function(){var f=flat(30);f.h[0]=999;f.l[0]=1;f.h[20]=130;f.l[28]=30;var a=L.aroon(bars(f.h,f.l),14);assert.strictEqual(a.up,100*(14-9)/14);assert.strictEqual(a.down,100*(14-1)/14)});
+t('aroon: ties use the most recent extreme',function(){var f=flat(15);var a=L.aroon(bars(f.h,f.l),14);assert.strictEqual(a.up,100);assert.strictEqual(a.down,100)});
+t('aroon: needs 15 bars, else null',function(){assert.strictEqual(L.aroon(bars(flat(14).h,flat(14).l),14),null);assert.strictEqual(L.aroon([],14),null);assert.strictEqual(L.aroon(null,14),null)});
+t('aroon: rising series → Up 100, Down 0 (uptrend)',function(){var h=[],l=[];for(var i=0;i<20;i++){h.push(100+i);l.push(90+i)}var a=L.aroon(bars(h,l),14);assert.strictEqual(a.up,100);assert.strictEqual(a.down,0);assert.strictEqual(L.aroonLabel(a.up,a.down).k,'up')});
+t('aroon: falling series → downtrend',function(){var h=[],l=[];for(var i=0;i<20;i++){h.push(100-i);l.push(90-i)}var a=L.aroon(bars(h,l),14);assert.strictEqual(a.up,0);assert.strictEqual(a.down,100);assert.strictEqual(L.aroonLabel(a.up,a.down).k,'dn')});
+t('aroon label wording',function(){assert.strictEqual(L.aroonLabel(100,0).t,'Uptrend: buyers in control');assert.strictEqual(L.aroonLabel(0,100).t,'Downtrend: sellers in control');assert.strictEqual(L.aroonLabel(50,50).t,'No clear trend: wait');assert.strictEqual(L.aroonLabel(null,null).t,'No clear trend: wait')});
+t('aroon label boundaries: 70/30 are NOT enough (strict)',function(){
+ assert.strictEqual(L.aroonLabel(70,29).k,'none');assert.strictEqual(L.aroonLabel(71,30).k,'none');assert.strictEqual(L.aroonLabel(70,30).k,'none');
+ assert.strictEqual(L.aroonLabel(71,29).k,'up');assert.strictEqual(L.aroonLabel(70.01,29.99).k,'up');
+ assert.strictEqual(L.aroonLabel(29,70).k,'none');assert.strictEqual(L.aroonLabel(30,71).k,'none');assert.strictEqual(L.aroonLabel(30,70).k,'none');
+ assert.strictEqual(L.aroonLabel(29,71).k,'dn');assert.strictEqual(L.aroonLabel(29.99,70.01).k,'dn');
+ assert.strictEqual(L.aroonLabel(100,100).k,'none');assert.strictEqual(L.aroonLabel(0,0).k,'none')});
+t('aroon note says confirm, not predict',function(){assert(/confirms a trend/i.test(L.aroonNote)&&/can.t predict/i.test(L.aroonNote)&&!/biquote/i.test(L.aroonNote))});
 authTests().then(function(){console.log(n+' tests passed')});
 
