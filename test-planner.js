@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,BLEND_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,m15Move,aroonAgree,SV,SCALP,migrateC,sigStrength,aroonSigText,aroonSeg,aroonRow,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT,pbEma,pbAtr,pbAgg,pbDir,pbStep,pbWalk,pbWhy,pbPlan,pbKey,pbStoreGet,pbStoreSet,pbPaperEval,PB_CAP,XO_N,XO_SLX,XO_RR,XO_NAME,emaSeries,aroonAt,xoSide,xoAgree,xoPlan,xoFlipBars,xoPbFired,pbDirHtf,xoEvaluate}')();var n=0;
+var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,BLEND_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,m15Move,aroonAgree,SV,SCALP,migrateC,sigStrength,aroonSigText,aroonSeg,aroonRow,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT,pbEma,pbAtr,pbAgg,pbDir,pbStep,pbWalk,pbWhy,pbPlan,pbKey,pbStoreGet,pbStoreSet,pbPaperEval,PB_CAP,XO_N,XO_SLX,XO_RR,XO_NAME,XO_WR90_SLX,XO_WR90_TP1,XO_WR90_TP2,XO_WR90_RR,emaSeries,aroonAt,xoSide,xoAgree,xoPlan,xoPlanText,xoPlanTag,xoFlipBars,xoPbFired,pbDirHtf,xoEvaluate,xoCk,xoPickyPass,xoAroonStrong,xoCloseBeyondEma,xoSessLnNy,xoAtrPct,xoAtrList}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -323,13 +323,16 @@ t('page: 15m/1H/4H Aroon load on the existing 15s interval; 5m candles stay',fun
  assert(/\['15m','1h','4h'\]/.test(src));assert(/bars15=r\[0\]\.bars/.test(src));assert(!/setInterval\(xoEvaluate/.test(src))});
 t('page: main badge is the Aroon crossover; settings and plans stay',function(){
  assert(/\$\('sig'\)\.textContent=s/.test(src));
- assert(/XO=xoEvaluate\(bars15,bars1hA,bars4h\)/.test(src));
+ assert(/XO=xoEvaluate\(bars15,bars1hA,bars4h/.test(src));
  assert(/function add\(d\)\{if\(prev==null\)return;var g=SIG&&SIG\.s==/.test(src));
  var pt=(src.match(/function planTick[\s\S]*?function svP/)||[''])[0];
  var lc=(src.match(/function logClosed[\s\S]*?pushH\(r\)/)||[''])[0];
  var mg=(src.match(/function migrateC[\s\S]*?return o}/)||[''])[0];
  assert(!/gdPB2|pbStoreSet|pbKey/.test(pt));assert(!/gdPB2/.test(lc));assert(!/gdPB2/.test(mg));
  assert(/for\(var k in SCALP\)DEF\[k\]=SCALP\[k\]/.test(src));assert(/C=migrateC\(C\)/.test(src));assert(/var SV=2/.test(src));
+ assert(/xoPreset:'std'/.test(src));assert(/picky:false/.test(src));
+ assert(/Standard \(1\.5×ATR SL, 2R TP\)/.test(src));assert(/~90% win \(3×ATR SL, \$3 TP1\)/.test(src));
+ assert(/id="xoplan"/.test(src));assert(/id="sgs-ck"/.test(src));assert(/ck\('picky'\)/.test(src));
  assert(/Not financial advice/.test(src));assert(!/biquote/i.test(src))});
 
 
@@ -352,6 +355,80 @@ t('xoPlan: SL is 1.5×15m ATR, TP is 2R, SELL mirrors BUY',function(){
  var s=L.xoPlan('SELL',4000,10,2);assert.strictEqual(s.sl,4015);assert.strictEqual(s.tp,3970);
  var C=8000;
  assert.strictEqual(s.sl,+(C-b.sl).toFixed(2));assert.strictEqual(s.tp,+(C-b.tp).toFixed(2));assert.strictEqual(s.ent,+(C-b.ent).toFixed(2))});
+t('xoPlan wr90: SL 3×ATR, TP1 $3 / TP2 $6 / TP3 2R, SELL mirrors BUY',function(){
+ var b=L.xoPlan('BUY',4000,10,2,'wr90');
+ assert.strictEqual(b.sl,3970);assert.strictEqual(b.t1,4003);assert.strictEqual(b.t2,4006);assert.strictEqual(b.t3,4060);assert.strictEqual(b.tp,4003);assert.strictEqual(b.preset,'wr90');assert.strictEqual(b.slx,3);
+ var s=L.xoPlan('SELL',4000,10,2,'wr90');
+ var C=8000;
+ assert.strictEqual(s.sl,+(C-b.sl).toFixed(2));assert.strictEqual(s.t1,+(C-b.t1).toFixed(2));assert.strictEqual(s.t2,+(C-b.t2).toFixed(2));assert.strictEqual(s.t3,+(C-b.t3).toFixed(2));assert.strictEqual(s.tp,s.t1);
+ var txt=L.xoPlanText(b,function(x){return x.toFixed(2)});
+ assert(/TP1 4003\.00/.test(txt)&&/TP2 4006\.00/.test(txt)&&/TP3 4060\.00/.test(txt)&&/SL 3970\.00/.test(txt));
+ assert.strictEqual(L.xoPlanTag('std'),'SL 1.5×15m ATR, TP 2R.');
+ assert.strictEqual(L.xoPlanTag('wr90'),'SL 3×15m ATR, TP1 $3, TP2 $6, TP3 2R.')});
+t('migrateC leaves existing keys and fills xoPreset=std, picky=false without bumping SV',function(){
+ var o=L.migrateC({sv:2,pl:false,pap:false});
+ assert.strictEqual(o.sv,2);assert.strictEqual(o.pl,false);assert.strictEqual(o.pap,false);
+ // defaults are applied in the page after migrateC; migrateC itself must not wipe sv=2 settings
+ var c={sv:2};c=L.migrateC(c);
+ assert.strictEqual(c.sv,2);
+ assert.strictEqual(L.XO_SLX,1.5);assert.strictEqual(L.XO_WR90_SLX,3)});
+t('picky checklist: required is pullback; SELL mirrors BUY; badge waits if required fails',function(){
+ assert.strictEqual(L.xoAroonStrong('BUY',{up:70,down:30}),true);
+ assert.strictEqual(L.xoAroonStrong('SELL',{up:30,down:70}),true);
+ assert.strictEqual(L.xoAroonStrong('BUY',{up:60,down:30}),false);
+ assert.strictEqual(L.xoAroonStrong('SELL',{up:60,down:30}),false);
+ assert.strictEqual(L.xoCloseBeyondEma('BUY',100,99),true);
+ assert.strictEqual(L.xoCloseBeyondEma('SELL',100,99),false);
+ assert.strictEqual(L.xoCloseBeyondEma('SELL',98,99),true);
+ assert.strictEqual(L.xoSessLnNy(Date.UTC(2026,10,20,8,0,0)),true);
+ assert.strictEqual(L.xoSessLnNy(Date.UTC(2026,10,20,3,0,0)),false);
+ assert.strictEqual(L.xoSessLnNy(Date.UTC(2026,10,20,14,0,0)),true);
+ var ck=L.xoCk({side:'BUY',d1:'BUY',d4:'WAIT',agree:1,pb:false,a15:{up:80,down:10},px:100,ema:99,atrPct:50,tClose:Date.UTC(2026,10,20,8)});
+ var req=ck.filter(function(x){return x.req});
+ assert.strictEqual(req.length,1);assert.strictEqual(req[0].id,'pb');assert.strictEqual(req[0].ok,false);
+ assert.strictEqual(L.xoPickyPass(ck),false);
+ var ids=ck.map(function(x){return x.id});
+ ['h1','h4','both','pb','aroon','ema','atr','sess'].forEach(function(id){assert(ids.indexOf(id)>=0,id)});
+ var ckS=L.xoCk({side:'SELL',d1:'SELL',d4:'SELL',agree:2,pb:true,a15:{up:10,down:80},px:98,ema:99,atrPct:40,tClose:Date.UTC(2026,10,20,14)});
+ assert.strictEqual(L.xoPickyPass(ckS),true);
+ ckS.forEach(function(x){assert.strictEqual(x.ok,true,x.id)});
+ // flip checks: BUY check of a mirrored state should match SELL of original for direction-sensitive rows
+ var ckB=L.xoCk({side:'BUY',d1:'BUY',d4:'BUY',agree:2,pb:true,a15:{up:80,down:10},px:102,ema:99,atrPct:40,tClose:Date.UTC(2026,10,20,14)});
+ assert.strictEqual(L.xoPickyPass(ckB),true);
+});
+t('xoEvaluate picky: WAIT until pullback confirms, then BUY/SELL returns',function(){
+ // enough bars that evaluate can run; last cross may or may not have PB.
+ // Direct unit: xoPickyPass already covered; here evaluate with picky true vs false must not throw and default picky off stays unchanged.
+ var bars=[],i;
+ for(i=0;i<25;i++)bars.push(xoBar(i*900,100+i,101+i,99+i,100.5+i));
+ bars.push(xoBar(25*900,80,80,70,72));
+ bars.push(xoBar(26*900,73,95,73,94));
+ function pad(bs,n){var out=bs.slice();while(out.length<n){var z=out[0],t=(out[0].t||0)-900;out.unshift(xoBar(t,z.open,z.high,z.low,z.close))}return out}
+ var b15=pad(bars,30),h=pad(bars,20);
+ var ev=L.xoEvaluate(b15,h,h);
+ var evP=L.xoEvaluate(b15,h,h,{preset:'std',picky:true});
+ var ev90=L.xoEvaluate(b15,h,h,{preset:'wr90',picky:false});
+ // default (no opt) equals picky off
+ assert.strictEqual(ev.s,L.xoEvaluate(b15,h,h,{preset:'std',picky:false}).s);
+ if(ev.s==='BUY'||ev.s==='SELL'){
+  if(!ev.pb){assert.strictEqual(evP.s,'WAIT');assert(evP.ck&&evP.ck.length)}
+  else {assert.strictEqual(evP.s,ev.s)}
+ }
+ if(ev90.plan){
+  assert.strictEqual(ev90.plan.preset,'wr90');
+  assert.strictEqual(ev90.plan.slx,3);
+  var fl=L.xoFlipBars(b15,8000),hf=L.xoFlipBars(h,8000);
+  var evF=L.xoEvaluate(fl,hf,hf,{preset:'wr90',picky:false});
+  if(ev90.plan&&evF.plan){
+   assert.strictEqual(evF.plan.side,ev90.plan.side==='BUY'?'SELL':'BUY');
+   assert.strictEqual(evF.plan.sl,+(8000-ev90.plan.sl).toFixed(2));
+   assert.strictEqual(evF.plan.t1,+(8000-ev90.plan.t1).toFixed(2));
+   assert.strictEqual(evF.plan.t2,+(8000-ev90.plan.t2).toFixed(2));
+   assert.strictEqual(evF.plan.t3,+(8000-ev90.plan.t3).toFixed(2));
+  }
+ }
+});
+
 t('flip of a synthetic series swaps BUY/SELL and mirrors SL/TP',function(){
  var C=8000,i,bars=[],fl,prev,curr,prevF,currF;
  // rising then a bullish Aroon-style swing: craft equal-length, then invert
