@@ -1,7 +1,7 @@
 // node test-planner.js : tests the pure logic block (/*LOGIC*/ ... /*ENDLOGIC*/) of index.html
 var fs=require('fs'),assert=require('assert'),src=fs.readFileSync(__dirname+'/index.html','utf8');
 var m=src.match(/\/\*LOGIC\*\/([\s\S]*?)\/\*ENDLOGIC\*\//);assert(m,'logic block');
-var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,m15Move,aroonAgree,SV,SCALP,migrateC,sigStrength,aroonSigText,aroonSeg,aroonRow,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT,pbEma,pbAtr,pbAgg,pbDir,pbStep,pbWalk,pbWhy,pbPlan,pbKey,pbStoreGet,pbStoreSet,pbPaperEval,PB_CAP}')();var n=0;
+var L=new Function(m[1]+';return{SIG_THR,SIG_CONF,SIG_W,SIG_NAME,BLEND_NAME,sigThr,sigTol,sigBase,sigScore,sigStep,sigRaw,m15Move,aroonAgree,SV,SCALP,migrateC,sigStrength,aroonSigText,aroonSeg,aroonRow,aroon,aroonLabel,aroonNote,balKey,CS,plUsd,planCap,pnDefaultsFor,srcOf,touchCount,paperExpire,lbSpec,swings,fvgScan,lbLevels,planCount,rankSelect,paperOpen,paperClose,balGet,balAdd,balReset,closedRow,groupClose,plSummary,ptFmt,planResultRow,GD_AUTH,authCheck,authSessOk,pnCalc,pushHist,histAdd,histGet,hKey,HCAP,zoneStrat,planWhy,sigInfo,OT,pbEma,pbAtr,pbAgg,pbDir,pbStep,pbWalk,pbWhy,pbPlan,pbKey,pbStoreGet,pbStoreSet,pbPaperEval,PB_CAP,XO_N,XO_SLX,XO_RR,XO_NAME,emaSeries,aroonAt,xoSide,xoAgree,xoPlan,xoFlipBars,xoPbFired,pbDirHtf,xoEvaluate}')();var n=0;
 function t(name,fn){fn();n++;console.log('ok',name)}
 var base={price:4000,off:0,lot:0.01,slD:15,tpD:30,acct:80,dp:2,xau:true};
 function c(k,o){var x={};for(var i in base)x[i]=base[i];x.k=k;if(o)for(var j in o)x[j]=o[j];return L.pnCalc(x)}
@@ -159,7 +159,7 @@ t('aroon note says confirm, not predict',function(){assert(/confirms a trend/i.t
 
 // weighted multi-window momentum (30s .40, 1m .20, 2m .15, 5m .15, 10m .10)
 function run(ps,thr,st){st=st||{s:'WAIT',c:null,n:0};var out=[];ps.forEach(function(p){st=L.sigStep(st,p,thr==null?L.SIG_THR:thr);out.push(st.s)});return out}
-t('weights, windows, label, trigger',function(){assert.deepStrictEqual(L.SIG_W.map(function(x){return x.ms}),[30000,60000,120000,300000,600000]);assert.deepStrictEqual(L.SIG_W.map(function(x){return x.w}),[0.4,0.2,0.15,0.15,0.1]);assert(Math.abs(L.SIG_W.reduce(function(s,x){return s+x.w},0)-1)<1e-12);assert.strictEqual(L.SIG_THR,1);assert.strictEqual(L.SIG_CONF,2);assert.strictEqual(L.SIG_NAME,'Momentum (30s-weighted, 1-10 min)')});
+t('weights, windows, label, trigger',function(){assert.deepStrictEqual(L.SIG_W.map(function(x){return x.ms}),[30000,60000,120000,300000,600000]);assert.deepStrictEqual(L.SIG_W.map(function(x){return x.w}),[0.4,0.2,0.15,0.15,0.1]);assert(Math.abs(L.SIG_W.reduce(function(s,x){return s+x.w},0)-1)<1e-12);assert.strictEqual(L.SIG_THR,1);assert.strictEqual(L.SIG_CONF,2);assert.strictEqual(L.SIG_NAME,'Aroon crossover (15m, 1H+4H)')});
 t('per-window threshold = 0.02% x sqrt(window/10min)',function(){L.SIG_W.forEach(function(x){assert(Math.abs(L.sigThr(x.ms)-0.02*Math.sqrt(x.ms/600000))<1e-12)});assert.strictEqual(L.sigThr(600000),0.02);assert(Math.abs(L.sigThr(30000)-0.004472)<1e-6);assert(Math.abs(L.sigThr(60000)-0.006325)<1e-6);assert(Math.abs(L.sigThr(120000)-0.008944)<1e-6);assert(Math.abs(L.sigThr(300000)-0.014142)<1e-6)});
 // history where price p0 was px at each window base and now is m
 function H5(now,px){var h=[];L.SIG_W.forEach(function(x,i){h.push([now-x.ms-1000,px[i]])});h.sort(function(a,b){return a[0]-b[0]});return h}
@@ -184,7 +184,7 @@ t('sigBase: exact boundary and tolerance; sigTol grows with window',function(){v
 t('15 min of 1.5s history covers the full 10-min window (>=600 points)',function(){var now=1e6,h=hist(now,1500,900000,function(){return 1});assert(h.length>=600);assert(L.sigBase(h,now,600000,L.sigTol(600000)))});
 t('new signals are labelled with the blend name; no relabel code',function(){assert.strictEqual(L.sigInfo('BUY',SC(2),{}).name,'Momentum (30s-weighted, 1-10 min)');assert(!/relabel/i.test(src))});
 t('history read preserves old saved strategy labels',function(){var st=mem();st.setItem('gdH2_u',JSON.stringify([{str:'Momentum (10-min move)'},{str:'Momentum (2-min move)'},{str:'Pivot bounce'}]));var h=L.histGet(st,'u');assert.strictEqual(h[0].str,'Momentum (10-min move)');assert.strictEqual(h[1].str,'Momentum (2-min move)');assert.strictEqual(h[2].str,'Pivot bounce')});
-t('no old momentum labels in page; no biquote',function(){assert(/id="str"/.test(src));assert(/id="arow"/.test(src));assert(!/10-min move|Momentum \(10|Momentum \(2-min|Momentum \(30-sec/i.test(src));assert(!/biquote/i.test(src));assert(src.indexOf('Momentum (30s-weighted, 1-10 min)')>0)});
+t('no old momentum labels in page; no biquote',function(){assert(/id="str"/.test(src));assert(/id="arow"/.test(src));assert(!/10-min move|Momentum \(10|Momentum \(2-min|Momentum \(30-sec/i.test(src));assert(!/biquote/i.test(src));assert(src.indexOf('Aroon crossover (15m, 1H+4H)')>0);assert(src.indexOf('BLEND_NAME')>0)});
 
 // Aroon top row segment
 t('aroonSeg: values rounded, colour kind and tag',function(){
@@ -194,15 +194,15 @@ t('aroonSeg: values rounded, colour kind and tag',function(){
  assert.deepStrictEqual(L.aroonSeg({up:50,down:50}),{u:'50',d:'50',k:'none',tag:'WAIT'});
  assert.strictEqual(L.aroonSeg({up:71,down:29}).tag,'BUY');assert.strictEqual(L.aroonSeg({up:70,down:29}).tag,'WAIT');assert.strictEqual(L.aroonSeg({up:29,down:71}).tag,'SELL');assert.strictEqual(L.aroonSeg({up:30,down:71}).tag,'WAIT')});
 t('aroonSeg: missing data shows dashes',function(){var na={u:'–',d:'–',k:'na',tag:'–'};assert.deepStrictEqual(L.aroonSeg(null),na);assert.deepStrictEqual(L.aroonSeg(undefined),na)});
-t('aroonRow: 1m, 5m and 1h from AR (1m first), dashes when AR is null or half-loaded',function(){
- var r=L.aroonRow({m1:{up:100,down:0},m5:{up:14,down:100},h1:{up:0,down:50}});assert.deepStrictEqual(Object.keys(r),['m1','m5','h1']);assert.strictEqual(r.m1.tag,'BUY');assert.strictEqual(r.m5.u,'14');assert.strictEqual(r.m5.d,'100');assert.strictEqual(r.h1.u,'0');assert.strictEqual(r.h1.d,'50');
- var n=L.aroonRow(null);assert.strictEqual(n.m1.u,'–');assert.strictEqual(n.m5.u,'–');assert.strictEqual(n.h1.d,'–');var h=L.aroonRow({m5:{up:100,down:0},h1:null});assert.strictEqual(h.m1.tag,'–');assert.strictEqual(h.m5.tag,'BUY');assert.strictEqual(h.h1.tag,'–')});
+t('aroonRow: 15m, 1h and 4h from AR, dashes when AR is null or half-loaded',function(){
+ var r=L.aroonRow({m15:{up:100,down:0},h1:{up:14,down:100},h4:{up:0,down:50}});assert.deepStrictEqual(Object.keys(r),['m15','h1','h4']);assert.strictEqual(r.m15.tag,'BUY');assert.strictEqual(r.h1.u,'14');assert.strictEqual(r.h1.d,'100');assert.strictEqual(r.h4.u,'0');assert.strictEqual(r.h4.d,'50');
+ var n=L.aroonRow(null);assert.strictEqual(n.m15.u,'–');assert.strictEqual(n.h1.u,'–');assert.strictEqual(n.h4.d,'–');var h=L.aroonRow({h1:{up:100,down:0},h4:null});assert.strictEqual(h.m15.tag,'–');assert.strictEqual(h.h1.tag,'BUY');assert.strictEqual(h.h4.tag,'–')});
 t('aroonAgree: signal side vs 1m Aroon trend (display only)',function(){var up=L.aroonSeg({up:100,down:0}),dn=L.aroonSeg({up:0,down:100}),wt=L.aroonSeg({up:50,down:50}),na=L.aroonSeg(null);
  assert.strictEqual(L.aroonAgree('BUY',up),'with');assert.strictEqual(L.aroonAgree('SELL',dn),'with');assert.strictEqual(L.aroonAgree('BUY',dn),'against');assert.strictEqual(L.aroonAgree('SELL',up),'against');
  assert.strictEqual(L.aroonAgree('BUY',wt),'none');assert.strictEqual(L.aroonAgree('SELL',wt),'none');assert.strictEqual(L.aroonAgree('BUY',na),'');assert.strictEqual(L.aroonAgree('WAIT',up),'')});
 
 t('aroonSigText: bold card text per timeframe (BUY / SELL / WAIT, dash when no data)',function(){assert.strictEqual(L.aroonSigText({up:100,down:0}),'Aroon signal: BUY');assert.strictEqual(L.aroonSigText({up:0,down:100}),'Aroon signal: SELL');assert.strictEqual(L.aroonSigText({up:50,down:50}),'Aroon signal: WAIT');assert.strictEqual(L.aroonSigText({up:70,down:29}),'Aroon signal: WAIT');assert.strictEqual(L.aroonSigText({up:71,down:30}),'Aroon signal: WAIT');assert.strictEqual(L.aroonSigText({up:71,down:29}),'Aroon signal: BUY');assert.strictEqual(L.aroonSigText({up:29,down:71}),'Aroon signal: SELL');assert.strictEqual(L.aroonSigText({up:30,down:71}),'Aroon signal: WAIT');assert.strictEqual(L.aroonSigText(null),'Aroon signal: –')});
-t('aroon row never shows UP/DOWN tags any more',function(){['m5','h1'].forEach(function(k){assert(['BUY','SELL','WAIT','–'].indexOf(L.aroonRow({m1:{up:100,down:0},m5:{up:0,down:100},h1:{up:50,down:50}})[k].tag)>=0)});assert.strictEqual(L.aroonRow({m5:{up:100,down:0},h1:{up:0,down:100}}).m5.tag,'BUY');assert.strictEqual(L.aroonRow({m5:{up:100,down:0},h1:{up:0,down:100}}).h1.tag,'SELL')});
+t('aroon row never shows UP/DOWN tags any more',function(){['h1','h4'].forEach(function(k){assert(['BUY','SELL','WAIT','–'].indexOf(L.aroonRow({m15:{up:100,down:0},h1:{up:0,down:100},h4:{up:50,down:50}})[k].tag)>=0)});assert.strictEqual(L.aroonRow({m15:{up:100,down:0},h1:{up:0,down:100},h4:{up:0,down:100}}).m15.tag,'BUY');assert.strictEqual(L.aroonRow({m15:{up:100,down:0},h1:{up:0,down:100},h4:{up:50,down:50}}).h1.tag,'SELL')});
 
 // STRONG / WEAK: STRONG = |blend score| >= 2 AND the 15-min trend agrees with the side; else WEAK
 function B(n,c0,c1,k){var a=[];for(var i=0;i<n;i++)a.push({close:i==n-1-k?c0:c1});return a}
@@ -221,16 +221,16 @@ t('standard scalping defaults',function(){assert.deepStrictEqual(L.SCALP,{sgb:1,
 t('migrateC: old saved settings get the new standard once, other keys kept',function(){var old={slm:'atr',slv:1.5,t1m:'atr',t1v:1.5,t2m:'lvl',t2v:0,sgb:2,mx:3,pap:false,lb:'7d',fvg:false};var m=L.migrateC(old);['sgb','slm','slv','t1m','t1v','t2m','t2v'].forEach(function(k){assert.strictEqual(m[k],L.SCALP[k],k)});assert.strictEqual(m.mx,3);assert.strictEqual(m.pap,false);assert.strictEqual(m.lb,'7d');assert.strictEqual(m.fvg,false);assert.strictEqual(m.sv,L.SV);assert.strictEqual(old.slm,'atr')});
 t('migrateC: runs only once; later user changes survive',function(){var m=L.migrateC({slm:'atr'});m.slv=0.1;m.t1v=2;var m2=L.migrateC(m);assert.strictEqual(m2.slv,0.1);assert.strictEqual(m2.t1v,2);assert.strictEqual(m2.sv,L.SV)});
 t('migrateC: fresh/corrupt settings get the standard; history keys untouched',function(){assert.strictEqual(L.migrateC({}).t1m,'rr');assert.strictEqual(L.migrateC(null).slv,0.05);var o={x:1,sv:0};var m=L.migrateC(o);assert.strictEqual(m.x,1);assert(!/gdH2|gdPL2|gdPA_|gdPM_/.test(String(L.migrateC)))});
-t('page wires defaults + migration; old 30m labels gone',function(){assert(/for\(var k in SCALP\)DEF\[k\]=SCALP\[k\]/.test(src));assert(/C=migrateC\(C\)/.test(src));assert(!/30m trend|· 30m|m30/.test(src));assert(/\(15m trend agrees\)/.test(src))});
+t('page wires defaults + migration; old 30m labels gone',function(){assert(/for\(var k in SCALP\)DEF\[k\]=SCALP\[k\]/.test(src));assert(/C=migrateC\(C\)/.test(src));assert(!/30m trend|· 30m|m30/.test(src));assert(/STRONG \(1H\+4H agree, pullback confirmed\)/.test(src))});
 
 
 // ---- Pullback recipe A (separate paper-only signal; blend unchanged) ----
 function BAR(t,o,h,l,c,open){return{openTime:new Date(t).toISOString(),open:o,high:h,low:l,close:c,isOpen:!!open}}
-t('pullback helpers are exported; blend constants unchanged',function(){
- assert.strictEqual(typeof L.pbStep,'function');assert.strictEqual(typeof L.pbPlan,'function');
+t('pullback helpers are exported; crossover is the main signal name',function(){
+ assert.strictEqual(typeof L.pbStep,'function');assert.strictEqual(typeof L.pbPlan,'function');assert.strictEqual(typeof L.xoEvaluate,'function');
  assert.strictEqual(L.SIG_THR,1);assert.strictEqual(L.SIG_CONF,2);
  assert.deepStrictEqual(L.SIG_W.map(function(x){return x.w}),[0.4,0.2,0.15,0.15,0.1]);
- assert.strictEqual(L.SIG_NAME,'Momentum (30s-weighted, 1-10 min)');
+ assert.strictEqual(L.SIG_NAME,'Aroon crossover (15m, 1H+4H)');assert.strictEqual(L.XO_NAME,'Aroon crossover (15m, 1H+4H)');assert.strictEqual(L.XO_N,8);assert.strictEqual(L.XO_SLX,1.5);assert.strictEqual(L.XO_RR,2);
  assert.deepStrictEqual(L.SCALP,{sgb:1,slm:'pct',slv:0.05,t1m:'rr',t1v:1.5,t2m:'rr',t2v:3});assert.strictEqual(L.SV,2)});
 t('pbEma: SMA seed then EMA; short series is null',function(){
  assert.strictEqual(L.pbEma([1,2,3],10),null);
@@ -287,11 +287,11 @@ t('pbWalk replays a pullback and does not refire until a new arm+resume',functio
  var w=L.pbWalk(bars,ema,'BUY','BUY');
  assert.strictEqual(w.fires.length,2);assert.strictEqual(w.fires[0].s,'BUY');assert.strictEqual(w.st.s,'BUY');assert.strictEqual(w.st.str,'STRONG')});
 t('pbWhy is plain English for wait / armed / fire',function(){
- assert(/No clear 1h trend/.test(L.pbWhy({dir:'WAIT',s:'WAIT'})));
- assert(/Uptrend \(1h\), waiting for a dip to the 5m avg/.test(L.pbWhy({dir:'BUY',s:'WAIT',armed:false,ready:true})));
- assert(/Uptrend \(1h\), dipped to 5m avg, waiting for a turn up/.test(L.pbWhy({dir:'BUY',s:'WAIT',armed:true,ready:true})));
- assert(/Uptrend \(1h\), dipped to 5m avg, turning up/.test(L.pbWhy({dir:'BUY',s:'BUY',ready:true})));
- assert(/Downtrend \(1h\), rallied to 5m avg, turning down/.test(L.pbWhy({dir:'SELL',s:'SELL',ready:true})))});
+ assert(/No clear 1H\+4H trend/.test(L.pbWhy({dir:'WAIT',s:'WAIT'})));
+ assert(/Uptrend \(1H\+4H\), waiting for a dip to the 15m avg/.test(L.pbWhy({dir:'BUY',s:'WAIT',armed:false,ready:true})));
+ assert(/Uptrend \(1H\+4H\), dipped to 15m avg, waiting for a turn up/.test(L.pbWhy({dir:'BUY',s:'WAIT',armed:true,ready:true})));
+ assert(/Uptrend \(1H\+4H\), dipped to 15m avg, turning up/.test(L.pbWhy({dir:'BUY',s:'BUY',ready:true})));
+ assert(/Downtrend \(1H\+4H\), rallied to 15m avg, turning down/.test(L.pbWhy({dir:'SELL',s:'SELL',ready:true})))});
 t('pbPlan: SL is 1.5×ATR, TP is 2R, 60-minute time stop',function(){
  var b=L.pbPlan('BUY',4000,10,2);assert.strictEqual(b.sl,3985);assert.strictEqual(b.tp,4030);assert.strictEqual(b.R,15);assert.strictEqual(b.rr,2);assert.strictEqual(b.tstop,60);assert.strictEqual(b.slx,1.5);
  var sl=L.pbPlan('SELL',4000,10,2);assert.strictEqual(sl.sl,4015);assert.strictEqual(sl.tp,3970);
@@ -313,23 +313,75 @@ t('pullback paper log uses gdPB2_ and never mixes with history or paper balances
  assert(st.d['gdPB2_dan']);assert(!st.d['gdH2_dan']);assert(!st.d['gdPA_dan']);assert(!st.d['gdPM_dan']);assert(!st.d['gdPL2']);
  var a=L.histGet(st,'dan');assert.deepStrictEqual(a,[]);
  assert(!/gdH2|gdPL2|gdPA_|gdPM_|gdPB2/.test(String(L.migrateC)))});
-t('page: Pullback card is in the frozen top, paper-only, alongside the blend badge',function(){
+t('page: Pullback card stays in the frozen top and confirms STRONG',function(){
  assert(/id="pb"/.test(src));assert(/id="pbb"/.test(src));
- assert(/Paper-only, testing/.test(src));assert(/id="pbc"/.test(src));assert(/id="sgs-pb"/.test(src));assert(/id="arpb"/.test(src));
+ assert(/Confirms STRONG/.test(src));assert(/id="pbc"/.test(src));assert(/id="sgs-pb"/.test(src));assert(/id="arpb"/.test(src));
  var top=src.match(/<div id="top"[\s\S]*?<div id="sgs"/);assert(top);assert(/id="pb"/.test(top[0]));assert(/id="sig"/.test(top[0]));
  assert(/#top>#pb/.test(src))});
-t('page: no new OHLC fetch; bars5 reused from the existing 5m load',function(){
+t('page: 15m/1H/4H Aroon load on the existing 15s interval; 5m candles stay',function(){
  assert(/interval=5m&limit=60/.test(src));assert(/bars5=c/.test(src));
- assert(!/ohlc\?interval=15m/.test(src))});
-t('page: blend badge, auto-trade, history and settings migration stay on the current signal',function(){
+ assert(/\['15m','1h','4h'\]/.test(src));assert(/bars15=r\[0\]\.bars/.test(src));assert(!/setInterval\(xoEvaluate/.test(src))});
+t('page: main badge is the Aroon crossover; settings and plans stay',function(){
  assert(/\$\('sig'\)\.textContent=s/.test(src));
- assert(/SS=sigScore\(H,now,m\);LS=SS\.score;SG=sigStep\(SG,LS,C\.sgb\)/.test(src));
+ assert(/XO=xoEvaluate\(bars15,bars1hA,bars4h\)/.test(src));
  assert(/function add\(d\)\{if\(prev==null\)return;var g=SIG&&SIG\.s==/.test(src));
  var pt=(src.match(/function planTick[\s\S]*?function svP/)||[''])[0];
  var lc=(src.match(/function logClosed[\s\S]*?pushH\(r\)/)||[''])[0];
  var mg=(src.match(/function migrateC[\s\S]*?return o}/)||[''])[0];
  assert(!/gdPB2|pbStoreSet|pbKey/.test(pt));assert(!/gdPB2/.test(lc));assert(!/gdPB2/.test(mg));
- assert(/for\(var k in SCALP\)DEF\[k\]=SCALP\[k\]/.test(src));assert(/C=migrateC\(C\)/.test(src));assert(/var SV=2/.test(src))});
+ assert(/for\(var k in SCALP\)DEF\[k\]=SCALP\[k\]/.test(src));assert(/C=migrateC\(C\)/.test(src));assert(/var SV=2/.test(src));
+ assert(/Not financial advice/.test(src));assert(!/biquote/i.test(src))});
 
+
+function xoBar(t,o,h,l,c){return {t:t,openTime:t,open:o,high:h,low:l,close:c,isOpen:false}}
+t('xoSide is a strict 15m Aroon crossover and SELL is the mirror of BUY',function(){
+ assert.strictEqual(L.xoSide({up:10,down:20},{up:60,down:40}),'BUY');
+ assert.strictEqual(L.xoSide({up:20,down:10},{up:40,down:60}),'SELL');
+ assert.strictEqual(L.xoSide({up:50,down:50},{up:51,down:49}),'BUY');
+ assert.strictEqual(L.xoSide({up:50,down:50},{up:49,down:51}),'SELL');
+ assert.strictEqual(L.xoSide({up:80,down:20},{up:81,down:19}),'WAIT');
+ assert.strictEqual(L.xoAgree('BUY','BUY','BUY'),2);
+ assert.strictEqual(L.xoAgree('BUY','BUY','WAIT'),1);
+ assert.strictEqual(L.xoAgree('BUY','SELL','SELL'),0);
+ assert.strictEqual(L.xoAgree('SELL','SELL','SELL'),2);
+ assert.strictEqual(L.pbDirHtf({up:100,down:0},{up:80,down:10}),'BUY');
+ assert.strictEqual(L.pbDirHtf({up:0,down:100},{up:10,down:80}),'SELL');
+ assert.strictEqual(L.pbDirHtf({up:100,down:0},{up:0,down:100}),'WAIT')});
+t('xoPlan: SL is 1.5×15m ATR, TP is 2R, SELL mirrors BUY',function(){
+ var b=L.xoPlan('BUY',4000,10,2);assert.strictEqual(b.sl,3985);assert.strictEqual(b.tp,4030);assert.strictEqual(b.R,15);assert.strictEqual(b.rr,2);
+ var s=L.xoPlan('SELL',4000,10,2);assert.strictEqual(s.sl,4015);assert.strictEqual(s.tp,3970);
+ var C=8000;
+ assert.strictEqual(s.sl,+(C-b.sl).toFixed(2));assert.strictEqual(s.tp,+(C-b.tp).toFixed(2));assert.strictEqual(s.ent,+(C-b.ent).toFixed(2))});
+t('flip of a synthetic series swaps BUY/SELL and mirrors SL/TP',function(){
+ var C=8000,i,bars=[],fl,prev,curr,prevF,currF;
+ // rising then a bullish Aroon-style swing: craft equal-length, then invert
+ for(i=0;i<20;i++)bars.push(xoBar(i*900,100+i,101+i,99+i,100.5+i));
+ // add a clear high then a dip so Down leads, then a new high so Up crosses Down
+ bars.push(xoBar(20*900,80,80,70,72));
+ bars.push(xoBar(21*900,73,95,73,94));
+ fl=L.xoFlipBars(bars,C);
+ // Aroon crossover side at last two windows must swap
+ prev=L.aroonAt(bars,bars.length-2,14);curr=L.aroonAt(bars,bars.length-1,14);
+ prevF=L.aroonAt(fl,fl.length-2,14);currF=L.aroonAt(fl,fl.length-1,14);
+ var a=L.xoSide(prev,curr),b=L.xoSide(prevF,currF);
+ if(a==='BUY')assert.strictEqual(b,'SELL');
+ else if(a==='SELL')assert.strictEqual(b,'BUY');
+ else assert.strictEqual(b,'WAIT');
+ // full evaluate: build HTF from the same flipped bars (cloned as 1h/4h)
+ function pad(bs,n){var out=bs.slice();while(out.length<n){var z=out[0],t=(out[0].t||0)-900;out.unshift(xoBar(t,z.open,z.high,z.low,z.close))}return out}
+ var b15=pad(bars,22),b15f=L.xoFlipBars(b15,C),h=pad(bars,20),hf=L.xoFlipBars(h,C);
+ var ev=L.xoEvaluate(b15,h,h),evF=L.xoEvaluate(b15f,hf,hf);
+ function flip(s){return s==='BUY'?'SELL':s==='SELL'?'BUY':'WAIT'}
+ assert.strictEqual(evF.s,flip(ev.s));
+ if(ev.d1&&ev.d1!='WAIT')assert.strictEqual(evF.d1,flip(ev.d1));
+ if(ev.d4&&ev.d4!='WAIT')assert.strictEqual(evF.d4,flip(ev.d4));
+ if(ev.plan||evF.plan){
+  assert(ev.plan&&evF.plan);
+  assert.strictEqual(evF.plan.side,flip(ev.plan.side));
+  assert.strictEqual(evF.plan.ent,+(C-ev.plan.ent).toFixed(2));
+  assert.strictEqual(evF.plan.sl,+(C-ev.plan.sl).toFixed(2));
+  assert.strictEqual(evF.plan.tp,+(C-ev.plan.tp).toFixed(2));
+ }
+});
 authTests().then(function(){console.log(n+' tests passed')});
 
