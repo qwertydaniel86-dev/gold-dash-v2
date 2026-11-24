@@ -77,10 +77,11 @@ body.inpos #top>#nt,body.inpos #top>#stats,body.inpos #top>#parts,body.inpos #to
 #arow{display:flex;gap:6px;justify-content:flex-start;align-items:center;margin-top:4px;font-size:11px;white-space:nowrap;overflow:hidden;color:#8b98a5}#arow .ag{display:flex;gap:4px;align-items:center}#arow i{font-style:normal}#arow em{font-style:normal;font-weight:700;font-size:9px;padding:1px 3px;border-radius:6px;background:#1f2a37}#arow em.up{color:#2fd27a}#arow em.dn{color:#ff5b5b}#arow em.none{color:#f5c542}#arow em.na{color:#8b98a5}
 .str{text-align:center;font-weight:800;letter-spacing:0}#top .str{white-space:nowrap}
 .at{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}.at .as{font-size:14px;font-weight:800}.at.up .as{color:#2fd27a}.at.dn .as{color:#ff5b5b}.at.none .as{color:#f5c542}.at.none{color:#9aa4b2}
+#feedn{color:#f5c542;margin-top:4px}
 </style></head><body>
 <div id="lg"><form id="lf"><h2>Market Dash v2</h2><div class="mu">Sign in</div><input id="lu" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="Username"><input id="lp" type="password" autocomplete="current-password" placeholder="Password"><button id="lgo" type="submit">Sign in</button><div id="lmsg"></div><div class="mu">Signals only, no trading. Not financial advice.</div></form></div>
 <div id="gbn"></div><div id="top"><div class="hd"><select id="sy"></select><span id="st" class="mu"></span><button id="gb">⚙</button></div>
-<div id="pxrow"><div id="pxl"><p class="px" id="pxp"><span id="px">—</span> <span id="arr"></span></p><div id="chg" class="mu">loading…</div></div><canvas id="ch"></canvas></div>
+<div id="pxrow"><div id="pxl"><p class="px" id="pxp"><span id="px">—</span> <span id="arr"></span></p><div id="chg" class="mu">loading…</div><div id="feedn" class="mu" style="display:none"></div></div><canvas id="ch"></canvas></div>
 <div id="sig" class="badge WAIT">WAIT</div><div id="str" class="str"></div><div id="xoplan" class="mu"></div><div id="sgs-ck" hidden></div><div id="spk" class="spike"></div><div id="fvw" class="fv"></div>
 <div class="btns"><button class="bb" id="bB">BUY</button><button class="bs" id="bS">SELL</button><button class="bc" id="bC">CLOSE</button></div>
 <div id="nt" class="mu"></div>
@@ -210,6 +211,17 @@ function lastIdxByClose(bars,tClose,sec){var i,ans=-1,c;for(i=0;i<(bars||[]).len
 function xoPbFired(bars,ema,i0,side,n){var st={s:'WAIT',armed:false,id:null,str:'',dir:'WAIT'},i,end=Math.min((bars||[]).length-1,i0+n);if(side!='BUY'&&side!='SELL')return false;for(i=i0;i<=end;i++){if(!bars[i]||bars[i].isOpen||ema[i]==null)continue;st=pbStep(st,bars[i],ema[i],side,side);if(st.fired&&st.s==side)return true}return false}
 function pbDirHtf(a1,a4){var d1=pbDir(a1),d4=pbDir(a4);return (d1==d4&&(d1=='BUY'||d1=='SELL'))?d1:'WAIT'}
 function xoEvaluate(b15,b1h,b4h,opt){opt=opt||{};var preset=opt.preset||'std',picky=!!opt.picky;var c15=(b15||[]).filter(function(b){return b&&!b.isOpen}),c1=(b1h||[]).filter(function(b){return b&&!b.isOpen}),c4=(b4h||[]).filter(function(b){return b&&!b.isOpen}),empty={s:'WAIT',str:'',why:'Need 15m, 1H and 4H Aroon',agree:0,plan:null,pb:false,d1:'WAIT',d4:'WAIT',a15:null,xoI:-1,ck:[],preset:preset,picky:picky};if(c15.length<20||c1.length<15||c4.length<15)return empty;var ema=emaSeries(c15.map(function(b){return +b.close}),10),i,prev,curr,side,lastXo='WAIT',xoI=-1;for(i=1;i<c15.length;i++){curr=aroonAt(c15,i,14);prev=aroonAt(c15,i-1,14);side=xoSide(prev,curr);if(side=='BUY'||side=='SELL'){lastXo=side;xoI=i}}var iL=c15.length-1,tC=barCloseMs(c15[iL],900),j1=lastIdxByClose(c1,tC,3600),j4=lastIdxByClose(c4,tC,14400),d1=pbDir(j1>=0?aroonAt(c1,j1,14):null),d4=pbDir(j4>=0?aroonAt(c4,j4,14):null),a15=aroonAt(c15,iL,14),px=c15[iL].close,em=ema[iL];function pack(extra){var o={s:'WAIT',str:'',why:'',agree:0,plan:null,pb:false,d1:d1,d4:d4,a15:a15,xoI:xoI,side:lastXo,ck:[],preset:preset,picky:picky,px:px},k;for(k in extra)o[k]=extra[k];return o}if(lastXo=='WAIT')return pack({why:'No 15m Aroon crossover yet',xoI:-1,side:undefined});var ag=xoAgree(lastXo,d1,d4),pb=xoPbFired(c15,ema,xoI,lastXo,XO_N),atrs=xoAtrList(c15),atrPct=xoAtrPct(atrs,iL,192),ck=xoCk({side:lastXo,d1:d1,d4:d4,agree:ag,pb:pb,a15:a15,px:px,ema:em,atrPct:atrPct,tClose:tC});if(ag<1)return pack({s:'WAIT',why:'15m crossover is '+lastXo+' but 1H and 4H do not agree — wait',agree:0,ck:ck});var atrAt=pbAtr(c15.slice(0,xoI+1),14),plan=xoPlan(lastXo,c15[xoI].close,atrAt,2,preset);if(plan){var far=plan.t3!=null?plan.t3:plan.tp;if((plan.side=='BUY'&&(px<=plan.sl||px>=far))||(plan.side=='SELL'&&(px>=plan.sl||px<=far)))plan=null}var str=(ag===2&&pb)?'STRONG':'WEAK',why;if(str=='STRONG')why='15m Aroon '+(lastXo=='BUY'?'Up crossed above Down':'Down crossed above Up')+'; 1H and 4H agree; 15m pullback to EMA10 confirmed. '+xoPlanTag(preset);else if(ag===2)why='15m Aroon crossover is '+lastXo+'; 1H and 4H agree; waiting for a 15m pullback to EMA10 (within '+XO_N+' bars of the cross) for STRONG. '+xoPlanTag(preset);else why='15m Aroon crossover is '+lastXo+'; partial agreement (1H '+d1+', 4H '+d4+'). WEAK until both agree and a 15m EMA10 pullback confirms. '+xoPlanTag(preset);var sig=lastXo;if(picky&&!xoPickyPass(ck)){sig='WAIT';why='Picky mode: 15m crossover is '+lastXo+', but a 15m pullback to EMA10 has not confirmed yet — badge stays WAIT. '+xoPlanTag(preset)}return pack({s:sig,str:str,why:why,agree:ag,plan:plan,pb:pb,ck:ck})}
+
+var FEED_TO_MS=4000,FEED_STICK_MS=60000;
+function feedInit(){return {use:'primary',until:0}}
+function feedPaperPaused(st){return !!(st&&st.use==='backup')}
+function feedTryPrimary(st,now){return !st||st.use!=='backup'||now>=(st.until||0)}
+async function feedCall(u,get,ms){var r=await get(u,ms);if(!r)throw new Error('empty');if(r.ok===false||(r.status!=null&&(r.status<200||r.status>=300)))throw new Error('status');var d=r.json!==undefined?r.json:r;if(!d||typeof d!=='object')throw new Error('json');return d}
+async function feedFetch(st,now,urls,get,timeoutMs){timeoutMs=timeoutMs||FEED_TO_MS;var next=st||feedInit(),data=null;
+ if(feedTryPrimary(next,now)){try{data=await feedCall(urls.primary,get,timeoutMs);return {st:feedInit(),data:data,source:'primary'}}catch(e){next={use:'backup',until:now+FEED_STICK_MS}}}
+ else next={use:'backup',until:next.until};
+ try{data=await feedCall(urls.backup,get,timeoutMs);return {st:next,data:data,source:'backup'}}
+ catch(e){e.st=next;throw e}}
 /*ENDLOGIC*/
 var BASE=atob('aHR0cHM6Ly9iaXF1b3RlLmlvL2FwaQ=='),
 GR=[['Metals',[['XAUUSD','Gold',2],['XAGUSD','Silver',3],['XPTUSD','Platinum',2]]],
@@ -228,7 +240,14 @@ function $(i){return document.getElementById(i)}
 function f(x){return x.toFixed(DP[SYM])}
 function API(){return BASE+'/'+SYM}
 function at(ms){var t=Date.now()-ms,b=null;for(var i=0;i<H.length;i++){if(H[i][0]<=t)b=H[i];else break}return b}
-async function j(u){var r=await fetch(u,{cache:'no-store'});return r.json()}
+var FEEDB='https://gd-feed.qwertydaniel86.workers.dev',feedSt=feedInit();
+function feedPath(u){return u.indexOf(BASE)===0?u.slice(BASE.length):u}
+async function feedHttp(u,ms){var ac=typeof AbortController!=='undefined'?new AbortController():null,t=ac?setTimeout(function(){ac.abort()},ms):null;
+ try{var r=await fetch(u,{cache:'no-store',signal:ac?ac.signal:undefined}),txt=await r.text(),json=null;try{json=JSON.parse(txt)}catch(e){json=null}return {ok:r.ok,status:r.status,json:json}}
+ finally{if(t)clearTimeout(t)}}
+function feedNote(){var e=$('feedn');if(!e)return;if(feedPaperPaused(feedSt)){e.style.display='block';e.textContent=(!SYM||SYM==='XAUUSD')?'Backup feed: gold futures, a few $ off spot. Paper entries and exits paused.':'Backup feed: Yahoo proxy, paper entries and exits paused.'}else{e.style.display='none';e.textContent=''}}
+async function j(u){try{var r=await feedFetch(feedSt,Date.now(),{primary:u,backup:FEEDB+feedPath(u)},feedHttp,FEED_TO_MS);feedSt=r.st;feedNote();return r.data}catch(e){if(e&&e.st)feedSt=e.st;else feedSt={use:'backup',until:Date.now()+FEED_STICK_MS};feedNote();throw e}}
+
 function ld(k){try{return JSON.parse(localStorage[k]||'{}')||{}}catch(e){return{}}}
 var EA=ld('gdE2'),PA=ld('gdP2');
 function E(){return EA[SYM]||(EA[SYM]=[])}function P(){return PA[SYM]||(PA[SYM]=[])}
@@ -360,7 +379,7 @@ var AX=null;function beep(){try{AX=AX||new (window.AudioContext||window.webkitAu
 function pst(p,s,now){p.st=s;if(s=='Expired'||s=='Cancelled'||s=='SL hit'||s=='TP2 hit')p.cl=now}
 function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
  var now=Date.now(),a=atr||m*0.002,L=PLs(),ctx={sym:SYM,xau:isXau(),dp:DP[SYM],t:now};
- L.forEach(function(p){if(p.cl)return;var o=p.st;
+ L.forEach(function(p){if(p.cl)return;if(feedPaperPaused(feedSt))return;var o=p.st;
   if(now>p.ex){if(p.fl&&p.pt&&p.pt.rem>0)paperExpire(p,m,ctx).forEach(logClosed);pst(p,'Expired',now)}
   else if(!closed){var d=p.d;
    if(!p.fl){if(d*(m-p.sl)<=0)pst(p,'Cancelled',now);else if(d*(m-p.ent)<=0){p.fl=now;pst(p,'Filled',now)}else pst(p,Math.abs(m-p.ent)<=0.25*a?'Near entry':'Waiting',now)}
@@ -371,7 +390,7 @@ function planTick(m){var c=$('plc');if(!C.pl){c.style.display='none';return}
  for(var i=L.length-1;i>=0;i--)if(L[i].cl&&now-L[i].cl>1800000){L.splice(i,1);svP()}
  var h1=TR['1h'],h4=TR['4h'],se=sess(),active=L.filter(function(p){return !p.cl}).length,msg='',lv=lbNow(a),N=lv?planCount(lv,a,lv.n5):null,
  tr=h1&&h4&&h1.d==h4.d&&h1.d!=0,cks=[['Trend agrees',!h1||!h4?null:tr],['Market open',!closed],['Session good ('+se.w+' PHT)',se.ok],['R:R ≥ 1:'+C.plrr,null]];
- if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!lv)msg='Loading '+C.lb+' lookback…';else if(!tr)msg='No new plans, timeframes disagree';else if(closed)msg='No new plans, market closed';else if(!se.ok)msg='No new plans, outside good session ('+se.w+' PHT)';
+ if(!h1||!h4)msg='Loading 1H/4H trend…';else if(!lv)msg='Loading '+C.lb+' lookback…';else if(!tr)msg='No new plans, timeframes disagree';else if(closed)msg='No new plans, market closed';else if(!se.ok)msg='No new plans, outside good session ('+se.w+' PHT)';else if(feedPaperPaused(feedSt))msg='Backup feed — paper entries and exits paused';
  else if(active<N){var cl=L.map(function(p){return p.ent}),r=mkPlans(m,h1.d,N-active,cl,lv);cks[3][1]=r.plans.length>0?true:false;
   r.plans.forEach(function(n){n.ct=now;n.lot=curLot();n.id=now+'-'+n.ent.toFixed(DP[SYM]);n.ex=Math.min(now+C.plh*36e5,se.end||Infinity);L.push(n)});
   if(r.plans.length){svP();note(SYM+' '+r.plans.length+' new '+(h1.d>0?'BUY':'SELL')+' LIMIT plan'+(r.plans.length>1?'s':''))}
@@ -525,7 +544,7 @@ function pbPaint(){var s=(PBview&&PBview.s)||'WAIT',str=(PBview&&PBview.str)||''
  if(w)w.textContent=why;if(p)p.innerHTML=plan?'Suggested plan: SL '+f(plan.sl)+' (1.5×15m ATR) · TP '+f(plan.tp)+' (2R) · 60-minute time stop · one position at a time.':'';
  var sg=$('sgs-pb');if(sg)sg.innerHTML='<b>Pullback</b> · <span class="'+(s=='BUY'?'up':s=='SELL'?'dn':'WAITc')+'">'+s+(str?' '+str:'')+'</span> · '+why+(plan?' · SL '+f(plan.sl)+' · TP '+f(plan.tp):'')+' · confirms STRONG';
  pbLogOut()}
-function pbUpdate(m){var r=pbCompute(m);PBst=r.st;PBview=r.st;try{pbPaperLive(m,Date.now(),r.fires)}catch(e){}pbPaint()}
+function pbUpdate(m){var r=pbCompute(m);PBst=r.st;PBview=r.st;try{if(!feedPaperPaused(feedSt))pbPaperLive(m,Date.now(),r.fires)}catch(e){}pbPaint()}
 function boot(){aroonRowOut();pnBuild();sel();pend(null);try{pbPaint()}catch(e){}candles().then(tick);aroonLoad();setInterval(tick,1500);setInterval(candles,30000);setInterval(aroonLoad,15000)}
 /* ---- sign-in: Gold Dash's own single account (PBKDF2-SHA256 salted hash above); stays signed in until Sign out; separate from MPAT ---- */
 var G_KEY='gdAuth',FAILS=0,LOCKT=0;
